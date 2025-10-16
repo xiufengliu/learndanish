@@ -1,0 +1,7 @@
+{
+  "name": "LearnDanish",
+  "description": "Example chat app built with Gemini",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

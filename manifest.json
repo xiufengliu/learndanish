@@ -1,0 +1,21 @@
+{
+  "short_name": "Danish Tutor",
+  "name": "Danish Tutor - Learn with Gemini",
+  "description": "Learn Danish through conversation with an AI tutor powered by Gemini.",
+  "icons": [
+    {
+      "src": "images/icon.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "images/icon.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#4285f4",
+  "background_color": "#f8f9fa"
+}
