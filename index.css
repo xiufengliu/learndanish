@@ -1153,9 +1153,9 @@ button:disabled {
 
 .skip-button {
   padding: 0.75rem 2rem;
-  background-color: var(--background-color);
-  color: var(--text-color);
-  border: 1px solid var(--border-color);
+  background-color: var(--text-secondary);
+  color: white;
+  border: none;
   border-radius: 8px;
   font-size: 0.95rem;
   cursor: pointer;
@@ -1163,7 +1163,7 @@ button:disabled {
 }
 
 .skip-button:hover {
-  background-color: #e8eaed;
+  background-color: var(--text-color);
 }
 
 .flashcard-empty,
