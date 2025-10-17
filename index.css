@@ -1166,6 +1166,12 @@ button:disabled {
   background-color: var(--text-color);
 }
 
+.skip-button:active,
+.skip-button:focus {
+  background-color: var(--text-color);
+  outline: none;
+}
+
 .flashcard-empty,
 .flashcard-summary {
   text-align: center;
