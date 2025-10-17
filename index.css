@@ -948,7 +948,8 @@ button:disabled {
   box-shadow: var(--box-shadow);
   max-width: 600px;
   width: 100%;
-  max-height: 90vh;
+  height: 85vh;
+  max-height: 700px;
   display: flex;
   flex-direction: column;
   animation: slideIn 0.3s ease;
@@ -989,9 +990,11 @@ button:disabled {
 .flashcard-main {
   flex: 1;
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 1rem 2rem 2rem;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 2rem 2rem 1rem;
+  gap: 3rem;
   overflow-y: auto;
 }
 
@@ -999,19 +1002,15 @@ button:disabled {
   width: 100%;
   max-width: 450px;
   perspective: 1000px;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
 }
 
 .flashcard {
   width: 100%;
-  height: 180px;
+  height: 160px;
   position: relative;
   transform-style: preserve-3d;
   transition: transform 0.6s;
   cursor: pointer;
-  flex-shrink: 0;
 }
 
 .flashcard.flipped {
@@ -1092,8 +1091,8 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.75rem;
-  margin-top: 0;
-  flex-shrink: 0;
+  width: 100%;
+  max-width: 450px;
 }
 
 .review-button {
@@ -1237,20 +1236,18 @@ button:disabled {
 
 @media (max-width: 600px) {
   .flashcard-panel {
+    height: 100vh;
     max-height: 100vh;
     border-radius: 0;
   }
 
   .flashcard-main {
-    padding: 0.75rem 1rem 1.5rem;
-  }
-
-  .flashcard-container {
-    gap: 1rem;
+    padding: 1.5rem 1rem 1rem;
+    gap: 2rem;
   }
 
   .flashcard {
-    height: 160px;
+    height: 140px;
   }
 
   .flashcard-word {
