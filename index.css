@@ -991,23 +991,27 @@ button:disabled {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 1.5rem 2rem;
-  min-height: 280px;
+  padding: 1rem 2rem 2rem;
+  overflow-y: auto;
 }
 
 .flashcard-container {
   width: 100%;
   max-width: 450px;
   perspective: 1000px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .flashcard {
   width: 100%;
-  height: 220px;
+  height: 180px;
   position: relative;
   transform-style: preserve-3d;
   transition: transform 0.6s;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .flashcard.flipped {
@@ -1024,7 +1028,7 @@ button:disabled {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 2rem;
+  padding: 1.5rem;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
@@ -1045,46 +1049,51 @@ button:disabled {
 }
 
 .flashcard-label {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   opacity: 0.9;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
 .flashcard-word {
-  font-size: 2rem;
+  font-size: 1.75rem;
   font-weight: 600;
-  margin: 0.75rem 0;
+  margin: 0.5rem 0;
   word-wrap: break-word;
 }
 
 .flashcard-pos {
-  font-size: 1rem;
+  font-size: 0.9rem;
   opacity: 0.8;
   font-style: italic;
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
 }
 
 .flashcard-context {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   opacity: 0.9;
-  margin-top: 1rem;
+  margin-top: 0.75rem;
   font-style: italic;
-  line-height: 1.4;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .flashcard-hint {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   opacity: 0.7;
-  margin-top: 1rem;
+  margin-top: 0.75rem;
 }
 
 .flashcard-buttons {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.75rem;
-  margin-top: 1rem;
+  margin-top: 0;
+  flex-shrink: 0;
 }
 
 .review-button {
@@ -1233,24 +1242,33 @@ button:disabled {
   }
 
   .flashcard-main {
-    padding: 1rem;
-    min-height: 220px;
+    padding: 0.75rem 1rem 1.5rem;
+  }
+
+  .flashcard-container {
+    gap: 1rem;
   }
 
   .flashcard {
-    height: 200px;
+    height: 160px;
   }
 
   .flashcard-word {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
   }
 
   .flashcard-context {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
 
   .flashcard-buttons {
     grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .review-button {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.9rem;
   }
 
   .summary-stats {
