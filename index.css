@@ -1153,23 +1153,31 @@ button:disabled {
 
 .skip-button {
   padding: 0.75rem 2rem;
-  background-color: var(--text-secondary);
-  color: white;
+  background-color: var(--text-secondary) !important;
+  color: white !important;
   border: none;
   border-radius: 8px;
   font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .skip-button:hover {
-  background-color: var(--text-color);
+  background-color: var(--text-color) !important;
 }
 
 .skip-button:active,
-.skip-button:focus {
-  background-color: var(--text-color);
+.skip-button:focus,
+.skip-button:focus-visible {
+  background-color: var(--text-color) !important;
+  color: white !important;
   outline: none;
+}
+
+.skip-button:visited {
+  background-color: var(--text-secondary) !important;
+  color: white !important;
 }
 
 .flashcard-empty,
