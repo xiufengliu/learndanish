@@ -1,0 +1,29 @@
+// Vocabulary and SRS type definitions
+
+export interface SRSData {
+  easeFactor: number; // 1.3 to 2.5
+  interval: number; // days until next review
+  repetitions: number;
+  nextReviewDate: Date;
+  lastQuality?: number; // 0-5
+}
+
+export interface VocabularyWord {
+  id: string;
+  danishWord: string;
+  englishTranslation: string;
+  context: string;
+  partOfSpeech?: string;
+  firstEncountered: Date;
+  lastPracticed: Date;
+  practiceCount: number;
+  proficiencyLevel: 'new' | 'learning' | 'familiar' | 'mastered';
+  srsData: SRSData;
+  relatedWords?: string[]; // IDs of related vocabulary
+  topicTags?: string[];
+}
+
+export interface SRSReview {
+  wordId: string;
+  quality: 0 | 1 | 2 | 3 | 4 | 5; // 0=complete blackout, 5=perfect recall
+}
