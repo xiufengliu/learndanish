@@ -42,48 +42,33 @@ const Flashcard: React.FC<FlashcardProps> = ({ word, onReview, showContext = tru
       // Get available voices
       const voices = window.speechSynthesis.getVoices();
       
-      // Find the best Danish voice (prioritize native Danish voices)
-      const danishVoice = voices.find(voice => 
-        voice.lang.startsWith('da') && voice.localService
-      ) || voices.find(voice => 
-        voice.lang.startsWith('da')
-      ) || voices.find(voice =>
-        voice.lang.includes('DK')
-      );
+      // Find the best Danish voice with better prioritization
+      // 1. Google Danish voice (usually better quality)
+      // 2. Local Danish voice
+      // 3. Any Danish voice
+      const danishVoice = 
+        voices.find(voice => voice.name.toLowerCase().includes('google') && voice.lang.startsWith('da')) ||
+        voices.find(voice => voice.lang === 'da-DK' && voice.localService) ||
+        voices.find(voice => voice.lang === 'da-DK') ||
+        voices.find(voice => voice.lang.startsWith('da')) ||
+        voices.find(voice => voice.lang.includes('DK'));
       
       // Create utterance for Danish word
       const utterance = new SpeechSynthesisUtterance(word.danishWord);
       utterance.lang = 'da-DK'; // Danish language
-      utterance.rate = 0.85; // Slightly slower for learning
+      utterance.rate = 0.75; // Slower for better learning
       utterance.pitch = 1.0;
       utterance.volume = 1.0;
       
       if (danishVoice) {
         utterance.voice = danishVoice;
-        console.log('Using Danish voice:', danishVoice.name);
+        console.log('Using Danish voice:', danishVoice.name, '- Local:', danishVoice.localService);
+      } else {
+        console.warn('No Danish voice found. Available voices:', voices.map(v => `${v.name} (${v.lang})`));
       }
       
       // Speak the word
       window.speechSynthesis.speak(utterance);
-      
-      // If there's context, speak it after a pause
-      if (showContext && word.context) {
-        utterance.onend = () => {
-          setTimeout(() => {
-            const contextUtterance = new SpeechSynthesisUtterance(word.context);
-            contextUtterance.lang = 'da-DK';
-            contextUtterance.rate = 0.85;
-            contextUtterance.pitch = 1.0;
-            contextUtterance.volume = 1.0;
-            
-            if (danishVoice) {
-              contextUtterance.voice = danishVoice;
-            }
-            
-            window.speechSynthesis.speak(contextUtterance);
-          }, 300);
-        };
-      }
     } else {
       console.warn('Text-to-speech not supported in this browser');
     }
@@ -104,7 +89,7 @@ const Flashcard: React.FC<FlashcardProps> = ({ word, onReview, showContext = tru
             {word.partOfSpeech && (
               <p className="flashcard-pos">{word.partOfSpeech}</p>
             )}
-            <p className="flashcard-hint">Click to reveal translation</p>
+            <p className="flashcard-hint">Click to flip card</p>
           </div>
         </div>
         <div className="flashcard-back">

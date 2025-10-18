@@ -11,6 +11,7 @@ import { useSettings } from './src/hooks/useSettings';
 import { useVocabularyTracker } from './src/hooks/useVocabularyTracker';
 import { useSpacedRepetition } from './src/hooks/useSpacedRepetition';
 import { useKeyboardShortcuts, ShortcutHandler } from './src/hooks/useKeyboardShortcuts';
+import { generateSystemInstruction } from './src/utils/systemPrompt';
 
 // --- Audio Helper Functions (as per guidelines) ---
 
@@ -234,29 +235,11 @@ const DanishTutorApp = () => {
               speechConfig: {
                 voiceConfig: {
                   prebuiltVoiceConfig: {
-                    voiceName: settings.voice.name
+                    voiceName: 'Kore' // Default Danish voice
                   }
                 }
               },
-              systemInstruction: `
-            You are a friendly and patient Danish tutor for English-speaking learners.
-            Your primary goal is to help the user communicate naturally and confidently in Danish through immersive conversation.
-
-            Core Rules:
-            1. Speak **mostly in Danish** (around 80–90% of the time). Use clear, natural Danish suited to the learner’s level.
-            2. Use **English only** when:
-              - explaining a difficult grammar or vocabulary point,
-              - clarifying something the user didn’t understand,
-              - or responding to a direct question about Danish.
-            3. Keep English explanations **brief and clear** (1–3 sentences), then return to Danish to maintain immersion.
-            4. Be friendly, encouraging, and conversational — like a native-speaking friend helping the learner practice.
-              Use natural praise such as “Godt klaret!” or “Det er næsten rigtigt – prøv sådan her…”.
-            5. Introduce new Danish words or idioms in context, and give a short English meaning or note if needed.
-            6. End each message with a Danish prompt or question to keep the dialogue flowing.
-
-            Goal:
-            Create an immersive Danish-speaking environment that maximizes exposure to Danish while using short English explanations only when necessary to support understanding.
-             `,
+              systemInstruction: generateSystemInstruction(settings),
               inputAudioTranscription: {},
               outputAudioTranscription: {},
             },

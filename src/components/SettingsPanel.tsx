@@ -1,6 +1,5 @@
 import React from 'react';
 import { AppSettings } from '../types/settings';
-import { AVAILABLE_VOICES } from '../constants/voices';
 
 interface SettingsPanelProps {
   settings: AppSettings;
@@ -22,27 +21,6 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdateSetting
         </div>
 
         <div className="settings-content">
-          {/* Voice Selection */}
-          <div className="setting-group">
-            <label htmlFor="voice-select">Voice</label>
-            <select
-              id="voice-select"
-              value={settings.voice.name}
-              onChange={(e) => {
-                const voice = AVAILABLE_VOICES.find(v => v.name === e.target.value);
-                if (voice) {
-                  onUpdateSettings({ voice: { name: voice.name, displayName: voice.displayName } });
-                }
-              }}
-            >
-              {AVAILABLE_VOICES.map(voice => (
-                <option key={voice.name} value={voice.name}>
-                  {voice.displayName}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Speech Speed */}
           <div className="setting-group">
             <label htmlFor="speed-slider">
@@ -58,9 +36,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdateSetting
               onChange={(e) => onUpdateSettings({ speechSpeed: parseFloat(e.target.value) })}
             />
             <div className="slider-labels">
-              <span>0.5x</span>
-              <span>1.0x</span>
-              <span>2.0x</span>
+              <span>0.5x (Slower)</span>
+              <span>1.0x (Normal)</span>
+              <span>2.0x (Faster)</span>
             </div>
           </div>
 
