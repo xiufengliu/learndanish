@@ -73,7 +73,8 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
     const x = e.clientX + 15;
     const y = e.clientY + 15;
     
-    setTooltip({ visible: true, text: translation, x, y, isExplanation: false });
+    // Add light bulb emoji at the beginning
+    setTooltip({ visible: true, text: `💡 ${translation}`, x, y, isExplanation: false });
   };
 
   const handleTooltipMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -232,8 +233,8 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
               </div>
 
               <div className="story-hint">
-                <p>💡 Click any Danish sentence to see its English translation in a draggable popup!</p>
-                <p>📚 Click the light bulb icon in the popup to get detailed grammar explanations!</p>
+                <p>💡 Click any Danish sentence to see its English translation in a popup!</p>
+                <p>📚 Click the 💡 light bulb in the popup to get detailed grammar explanations!</p>
               </div>
             </div>
           </div>
@@ -248,18 +249,15 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
             onMouseDown={handleTooltipMouseDown}
             onTouchStart={handleTooltipTouchStart}
           >
-            <div className="tooltip-content" style={{ whiteSpace: 'pre-wrap' }}>{tooltip.text}</div>
+            <div 
+              className={`tooltip-content ${tooltip.isExplanation ? 'explanation-mode' : ''}`}
+              style={{ whiteSpace: 'pre-wrap' }}
+              onClick={!tooltip.isExplanation && lastClickedSentence ? handleGenerateExplanation : undefined}
+              title={!tooltip.isExplanation ? 'Click the 💡 to see grammar explanation' : ''}
+            >
+              {isLoadingExplanation ? '⏳ Loading explanation...' : tooltip.text}
+            </div>
             <div className="tooltip-buttons">
-              {!tooltip.isExplanation && lastClickedSentence && (
-                <button 
-                  className="tooltip-explain-btn"
-                  onClick={handleGenerateExplanation}
-                  disabled={isLoadingExplanation}
-                  title="Get grammar explanation"
-                >
-                  {isLoadingExplanation ? '⏳' : '💡'}
-                </button>
-              )}
               <button 
                 className="tooltip-close"
                 onClick={handleTooltipClose}

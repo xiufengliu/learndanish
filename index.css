@@ -455,6 +455,15 @@ button:disabled {
 .story-tooltip .tooltip-content {
   font-size: 0.95rem;
   line-height: 1.6;
+  cursor: pointer;
+}
+
+.story-tooltip .tooltip-content:not(.explanation-mode):hover {
+  opacity: 0.9;
+}
+
+.story-tooltip .tooltip-content.explanation-mode {
+  cursor: grab;
 }
 
 .container.maximized .tooltip {
