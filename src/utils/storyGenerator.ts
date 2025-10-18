@@ -11,7 +11,7 @@ export async function generateStory(
     advanced: 'complex vocabulary with sophisticated grammar structures and idiomatic expressions'
   };
 
-  const translationLanguage = audienceLanguage === 'chinese' ? 'Chinese (中文)' : 'English';
+  const translationLanguage = audienceLanguage === 'chinese' ? 'Simplified Chinese (简体中文)' : 'English';
 
   const prompt = `Generate a short Danish story (5-7 sentences) at ${difficultyLevel} level.
 
@@ -77,7 +77,7 @@ export async function generateStoryExplanation(
   danishText: string,
   audienceLanguage: 'english' | 'chinese' = 'english'
 ): Promise<StoryExplanation[]> {
-  const translationLanguage = audienceLanguage === 'chinese' ? 'Chinese (中文)' : 'English';
+  const translationLanguage = audienceLanguage === 'chinese' ? 'Simplified Chinese (简体中文)' : 'English';
   
   const prompt = `Analyze this Danish text sentence by sentence and provide detailed grammar explanations in ${translationLanguage}.
 

@@ -447,15 +447,18 @@ button:disabled {
 }
 
 .story-tooltip {
-  max-width: 500px;
-  max-height: 70vh;
+  max-width: 600px;
+  max-height: 80vh;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .story-tooltip .tooltip-content {
   font-size: 0.95rem;
   line-height: 1.6;
   cursor: pointer;
+  max-height: calc(80vh - 60px);
+  overflow-y: auto;
 }
 
 .story-tooltip .tooltip-content:not(.explanation-mode) {
@@ -474,6 +477,7 @@ button:disabled {
 
 .story-tooltip .tooltip-content.explanation-mode {
   cursor: grab;
+  max-height: none;
 }
 
 .container.maximized .tooltip {

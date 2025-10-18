@@ -4,6 +4,7 @@ import { generateExampleSentences, generateCulturalNote, generateGrammaticalForm
 
 interface VocabularyListProps {
   vocabulary: VocabularyWord[];
+  audienceLanguage: 'english' | 'chinese';
   onClose: () => void;
   onDeleteWord?: (id: string) => void;
   onUpdateWord?: (id: string, updates: Partial<VocabularyWord>) => void;
@@ -24,7 +25,7 @@ const speakText = (text: string, lang: string = 'da-DK') => {
 type SortBy = 'recent' | 'alphabetical' | 'proficiency';
 type FilterBy = 'all' | 'unmastered' | 'mastered';
 
-const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, onDeleteWord, onUpdateWord, onClearAll }) => {
+const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, audienceLanguage, onClose, onDeleteWord, onUpdateWord, onClearAll }) => {
   const [sortBy, setSortBy] = useState<SortBy>('recent');
   const [filterBy, setFilterBy] = useState<FilterBy>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -91,7 +92,8 @@ const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, on
       const examples = await generateExampleSentences(
         word.danishWord,
         word.englishTranslation,
-        word.partOfSpeech
+        word.partOfSpeech,
+        audienceLanguage
       );
       onUpdateWord(word.id, { exampleSentences: examples });
     } catch (error) {
@@ -110,7 +112,7 @@ const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, on
     
     setLoadingCultural(prev => new Set(prev).add(word.id));
     try {
-      const note = await generateCulturalNote(word.danishWord, word.englishTranslation);
+      const note = await generateCulturalNote(word.danishWord, word.englishTranslation, audienceLanguage);
       if (note) {
         onUpdateWord(word.id, { culturalNotes: note });
       }
@@ -133,7 +135,8 @@ const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, on
       const forms = await generateGrammaticalForms(
         word.danishWord,
         word.englishTranslation,
-        word.partOfSpeech
+        word.partOfSpeech,
+        audienceLanguage
       );
       if (forms) {
         onUpdateWord(word.id, { grammaticalForms: forms });

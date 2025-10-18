@@ -379,7 +379,7 @@ const DanishTutorApp = () => {
     } else {
       setTooltip({ visible: true, text: 'Translating...', x, y });
       try {
-        const targetLanguage = settings.audienceLanguage === 'chinese' ? 'Chinese (中文)' : 'English';
+        const targetLanguage = settings.audienceLanguage === 'chinese' ? 'Simplified Chinese (简体中文)' : 'English';
         const translation = await retryWithBackoff(async () => {
           const response = await withGenAIClient(client =>
             client.models.generateContent({
@@ -660,6 +660,7 @@ const DanishTutorApp = () => {
       {showVocabulary && (
         <VocabularyList
           vocabulary={vocabulary}
+          audienceLanguage={settings.audienceLanguage}
           onClose={() => setShowVocabulary(false)}
           onDeleteWord={deleteWord}
           onUpdateWord={updateWord}

@@ -14,7 +14,7 @@ export async function extractVocabularyFromMessage(
   context: string,
   audienceLanguage: 'english' | 'chinese' = 'english'
 ): Promise<Omit<VocabularyWord, 'id' | 'firstEncountered' | 'lastPracticed' | 'practiceCount' | 'proficiencyLevel' | 'srsData'>[]> {
-  const targetLanguage = audienceLanguage === 'chinese' ? 'Chinese (中文)' : 'English';
+  const targetLanguage = audienceLanguage === 'chinese' ? 'Simplified Chinese (简体中文)' : 'English';
   
   try {
     const prompt = `

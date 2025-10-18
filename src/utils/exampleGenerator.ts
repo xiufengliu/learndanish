@@ -8,7 +8,7 @@ export async function generateExampleSentences(
   partOfSpeech?: string,
   audienceLanguage: 'english' | 'chinese' = 'english'
 ): Promise<string[]> {
-  const targetLanguage = audienceLanguage === 'chinese' ? 'Chinese (中文)' : 'English';
+  const targetLanguage = audienceLanguage === 'chinese' ? 'Simplified Chinese (简体中文)' : 'English';
   
   try {
     const prompt = `
@@ -121,12 +121,16 @@ If there is NO significant cultural context (just a regular everyday word), retu
 export async function generateGrammaticalForms(
   danishWord: string,
   englishTranslation: string,
-  partOfSpeech?: string
+  partOfSpeech?: string,
+  audienceLanguage: 'english' | 'chinese' = 'english'
 ): Promise<any | null> {
+  const targetLanguage = audienceLanguage === 'chinese' ? 'Simplified Chinese (简体中文)' : 'English';
+  
   try {
     const prompt = `
 Analyze the Danish word "${danishWord}" (${englishTranslation}) and provide its grammatical forms.
 ${partOfSpeech ? `Part of speech: ${partOfSpeech}` : ''}
+Provide explanations in ${targetLanguage}.
 
 Based on the word type, provide the appropriate forms:
 
