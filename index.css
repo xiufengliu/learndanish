@@ -112,10 +112,12 @@ body {
   gap: 8px;
   align-items: center;
   width: 100%;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px 12px 0 0;
+  padding: 1rem 1.5rem;
   margin-bottom: 1rem;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
 }
 
 .title-bar-left {
@@ -137,22 +139,25 @@ h1 {
 
 .clear-button,
 .theme-button,
+.grammar-button,
 .vocabulary-button,
 .flashcard-button,
 .settings-button,
 .maximize-button {
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
+  padding: 10px;
+  border-radius: 10px;
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 40px;
-  height: 40px;
-  transition: background-color 0.2s ease;
+  width: 42px;
+  height: 42px;
+  transition: all 0.3s ease;
   position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .maximize-button {
@@ -161,36 +166,54 @@ h1 {
 
 .clear-button:hover,
 .theme-button:hover,
+.grammar-button:hover,
 .vocabulary-button:hover,
 .flashcard-button:hover,
 .settings-button:hover,
 .maximize-button:hover {
-  background-color: var(--background-color);
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.clear-button:active,
+.theme-button:active,
+.grammar-button:active,
+.vocabulary-button:active,
+.flashcard-button:active,
+.settings-button:active,
+.maximize-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .clear-button svg,
 .theme-button svg,
+.grammar-button svg,
 .vocabulary-button svg,
 .flashcard-button svg,
 .settings-button svg,
 .maximize-button svg {
   width: 18px;
   height: 18px;
-  fill: var(--text-secondary);
+  fill: #ffffff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
 .vocab-badge {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  background-color: var(--primary-color);
+  top: -4px;
+  right: -4px;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   color: white;
   font-size: 0.65rem;
-  font-weight: 600;
-  padding: 2px 5px;
-  border-radius: 10px;
-  min-width: 16px;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 12px;
+  min-width: 18px;
   text-align: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.9);
 }
 
 .chat-history {
@@ -1789,35 +1812,6 @@ button:disabled {
   margin: 0.5rem 0;
   line-height: 1.5;
   color: var(--text-secondary);
-}
-
-.grammar-button,
-.vocabulary-button,
-.flashcard-button {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-.grammar-button svg,
-.vocabulary-button svg,
-.flashcard-button svg {
-  width: 20px;
-  height: 20px;
-  fill: var(--text-color);
-}
-
-.grammar-button:hover,
-.vocabulary-button:hover,
-.flashcard-button:hover {
-  background-color: rgba(66, 133, 244, 0.1);
 }
 
 /* Vocabulary expandable sections */
