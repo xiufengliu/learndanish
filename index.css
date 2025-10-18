@@ -412,6 +412,51 @@ button:disabled {
   border-radius: 4px;
 }
 
+.tooltip-buttons {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 4px;
+  z-index: 10;
+}
+
+.tooltip-explain-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+  user-select: none;
+  border-radius: 4px;
+}
+
+.tooltip-explain-btn:hover:not(:disabled) {
+  opacity: 1;
+  background-color: rgba(102, 126, 234, 0.3);
+  transform: scale(1.1);
+}
+
+.tooltip-explain-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.story-tooltip {
+  max-width: 500px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.story-tooltip .tooltip-content {
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
 .container.maximized .tooltip {
   max-width: 500px;
 }

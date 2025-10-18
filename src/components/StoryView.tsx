@@ -12,34 +12,49 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
   const [explanation, setExplanation] = useState<StoryExplanation[] | null>(null);
   const [isLoadingExplanation, setIsLoadingExplanation] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0 });
+  const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0, isExplanation: false });
   const [isDraggingTooltip, setIsDraggingTooltip] = useState(false);
-  const [selectedText, setSelectedText] = useState<string>('');
   const [lastClickedSentence, setLastClickedSentence] = useState<string>('');
   const tooltipDragOffsetRef = useRef({ x: 0, y: 0 });
 
   const handleGenerateExplanation = async () => {
-    // Try to get manually selected text first
-    const selection = window.getSelection();
-    const manuallySelected = selection?.toString().trim() || '';
-    
-    // Use manually selected text if available, otherwise use last clicked sentence
-    const textToExplain = manuallySelected || lastClickedSentence;
-    
-    if (!textToExplain) {
-      alert('Please click on a Danish sentence first or select some text to get grammar explanation.');
+    if (!lastClickedSentence) {
+      alert('Please click on a Danish sentence first to get grammar explanation.');
       return;
     }
     
-    setSelectedText(textToExplain);
     setIsLoadingExplanation(true);
-    setError(null);
     try {
-      const explanationData = await generateStoryExplanation(textToExplain);
-      setExplanation(explanationData);
-      setShowExplanation(true);
+      const explanationData = await generateStoryExplanation(lastClickedSentence);
+      
+      // Format explanation as readable text for the tooltip
+      let explanationText = '';
+      explanationData.forEach((sentenceExpl, idx) => {
+        if (idx > 0) explanationText += '\n\n---\n\n';
+        explanationText += `📝 ${sentenceExpl.sentence}\n`;
+        explanationText += `🇬🇧 ${sentenceExpl.translation}\n\n`;
+        
+        sentenceExpl.grammarPoints.forEach((point, pidx) => {
+          explanationText += `${pidx + 1}. [${point.type.toUpperCase()}]\n`;
+          explanationText += `   ${point.description}\n`;
+          if (point.example) {
+            explanationText += `   Example: ${point.example}\n`;
+          }
+          explanationText += '\n';
+        });
+      });
+      
+      setTooltip(current => ({ 
+        ...current, 
+        text: explanationText, 
+        isExplanation: true 
+      }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate explanation');
+      setTooltip(current => ({ 
+        ...current, 
+        text: `Error: ${err instanceof Error ? err.message : 'Failed to generate explanation'}`,
+        isExplanation: false
+      }));
     } finally {
       setIsLoadingExplanation(false);
     }
@@ -58,7 +73,7 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
     const x = e.clientX + 15;
     const y = e.clientY + 15;
     
-    setTooltip({ visible: true, text: translation, x, y });
+    setTooltip({ visible: true, text: translation, x, y, isExplanation: false });
   };
 
   const handleTooltipMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -184,17 +199,6 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
             </span>
           </div>
           <div className="story-header-actions">
-            {!showExplanation && (
-              <button 
-                className="explain-button" 
-                onClick={handleGenerateExplanation}
-                disabled={isLoadingExplanation}
-                aria-label="Generate grammar explanation"
-                title="Explain grammar"
-              >
-                {isLoadingExplanation ? '⏳' : '💡'}
-              </button>
-            )}
             <button className="close-button" onClick={onClose} aria-label="Close story">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" aria-hidden="true">
                 <path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z" />
@@ -210,9 +214,8 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
             </div>
           )}
 
-          {!showExplanation ? (
-            <div className="story-text-container">
-              <div className="story-section">
+          <div className="story-text-container">
+            <div className="story-section">
                 <h3>🇩🇰 Danish Story</h3>
                 <div className="story-text danish-text">
                   {danishSentences.map((sentence, idx) => (
@@ -230,64 +233,14 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
 
               <div className="story-hint">
                 <p>💡 Click any Danish sentence to see its English translation in a draggable popup!</p>
-                <p>📚 After clicking a sentence, click the light bulb icon to get grammar explanations for that sentence. You can also manually select any text for explanation.</p>
+                <p>📚 Click the light bulb icon in the popup to get detailed grammar explanations!</p>
               </div>
             </div>
-          ) : (
-            <div className="story-explanation-container">
-              <div className="explanation-header">
-                <div>
-                  <h3>📚 Grammar Explanation</h3>
-                  <p className="explanation-selected-text">Selected: "{selectedText}"</p>
-                </div>
-                <button 
-                  className="back-to-story-button"
-                  onClick={() => setShowExplanation(false)}
-                >
-                  ← Back to Story
-                </button>
-              </div>
-
-              {explanation && explanation.map((sentenceExplanation, idx) => (
-                <div key={idx} className="explanation-card">
-                  <div className="explanation-sentence">
-                    <div className="sentence-danish">
-                      <strong>🇩🇰</strong> {sentenceExplanation.sentence}
-                    </div>
-                    <div className="sentence-english">
-                      <strong>🇬🇧</strong> {sentenceExplanation.translation}
-                    </div>
-                  </div>
-
-                  <div className="grammar-points">
-                    {sentenceExplanation.grammarPoints.map((point, pidx) => (
-                      <div key={pidx} className="grammar-point">
-                        <div className="grammar-point-header">
-                          <span 
-                            className="grammar-type-badge"
-                            style={{ backgroundColor: getGrammarColor(point.type) }}
-                          >
-                            {getGrammarIcon(point.type)} {point.type}
-                          </span>
-                        </div>
-                        <p className="grammar-description">{point.description}</p>
-                        {point.example && (
-                          <div className="grammar-example">
-                            <strong>Example:</strong> {point.example}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+          </div>
         
         {tooltip.visible && (
           <div 
-            className="tooltip draggable-tooltip" 
+            className="tooltip draggable-tooltip story-tooltip" 
             style={{ 
               top: `${tooltip.y}px`, 
               left: `${tooltip.x}px`
@@ -295,15 +248,27 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
             onMouseDown={handleTooltipMouseDown}
             onTouchStart={handleTooltipTouchStart}
           >
-            <div className="tooltip-content">{tooltip.text}</div>
-            <button 
-              className="tooltip-close"
-              onClick={handleTooltipClose}
-              onTouchEnd={handleTooltipClose}
-              aria-label="Close translation"
-            >
-              ×
-            </button>
+            <div className="tooltip-content" style={{ whiteSpace: 'pre-wrap' }}>{tooltip.text}</div>
+            <div className="tooltip-buttons">
+              {!tooltip.isExplanation && lastClickedSentence && (
+                <button 
+                  className="tooltip-explain-btn"
+                  onClick={handleGenerateExplanation}
+                  disabled={isLoadingExplanation}
+                  title="Get grammar explanation"
+                >
+                  {isLoadingExplanation ? '⏳' : '💡'}
+                </button>
+              )}
+              <button 
+                className="tooltip-close"
+                onClick={handleTooltipClose}
+                onTouchEnd={handleTooltipClose}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
           </div>
         )}
       </div>
