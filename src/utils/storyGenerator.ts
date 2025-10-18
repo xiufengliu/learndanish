@@ -26,18 +26,23 @@ Important: Return ONLY the JSON object, no other text.`;
 
   try {
     return await withGenAIClient(async (genAI) => {
+      console.log('Requesting story from Gemini API...');
       const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
       const result = await model.generateContent(prompt);
       const response = result.response;
       const text = response.text();
       
+      console.log('Received response from Gemini:', text);
+      
       // Extract JSON from the response
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
-        throw new Error('Failed to parse story response');
+        console.error('Failed to find JSON in response:', text);
+        throw new Error('Failed to parse story response - no JSON found in response');
       }
       
       const parsedResponse = JSON.parse(jsonMatch[0]);
+      console.log('Parsed response:', parsedResponse);
       
       return {
         id: `story-${Date.now()}`,
@@ -49,7 +54,11 @@ Important: Return ONLY the JSON object, no other text.`;
     });
   } catch (error) {
     console.error('Error generating story:', error);
-    throw new Error('Failed to generate story. Please try again.');
+    // Re-throw with original error details
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Failed to generate story: ${String(error)}`);
   }
 }
 
@@ -88,22 +97,31 @@ Important: Return ONLY the JSON array, no other text.`;
 
   try {
     return await withGenAIClient(async (genAI) => {
+      console.log('Requesting story explanation from Gemini API...');
       const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
       const result = await model.generateContent(prompt);
       const response = result.response;
       const text = response.text();
       
+      console.log('Received explanation response from Gemini:', text);
+      
       // Extract JSON from the response
       const jsonMatch = text.match(/\[[\s\S]*\]/);
       if (!jsonMatch) {
-        throw new Error('Failed to parse explanation response');
+        console.error('Failed to find JSON in explanation response:', text);
+        throw new Error('Failed to parse explanation response - no JSON found in response');
       }
       
       const parsedResponse = JSON.parse(jsonMatch[0]);
+      console.log('Parsed explanation:', parsedResponse);
       return parsedResponse;
     });
   } catch (error) {
     console.error('Error generating explanation:', error);
-    throw new Error('Failed to generate explanation. Please try again.');
+    // Re-throw with original error details
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Failed to generate explanation: ${String(error)}`);
   }
 }
