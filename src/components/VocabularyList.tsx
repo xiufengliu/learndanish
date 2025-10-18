@@ -342,21 +342,28 @@ const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, on
                         <h4>Example Sentences</h4>
                         {word.exampleSentences && word.exampleSentences.length > 0 ? (
                           <ul className="example-sentences-list">
-                            {word.exampleSentences.map((sentence, idx) => (
-                              <li key={idx}>
-                                {sentence}
-                                <button
-                                  className="vocab-speaker-button-small"
-                                  onClick={() => {
-                                    const danishPart = sentence.split(' - ')[0];
-                                    speakText(danishPart, 'da-DK');
-                                  }}
-                                  aria-label="Hear sentence"
-                                >
-                                  🔊
-                                </button>
-                              </li>
-                            ))}
+                            {word.exampleSentences.map((sentence, idx) => {
+                              const [danishPart, englishPart] = sentence.split(' - ');
+                              return (
+                                <li key={idx}>
+                                  <div className="example-sentence-text">
+                                    <span className="example-sentence-danish">{danishPart}</span>
+                                    {englishPart && (
+                                      <span className="example-sentence-english">{englishPart}</span>
+                                    )}
+                                  </div>
+                                  <button
+                                    className="vocab-speaker-button-small"
+                                    onClick={() => {
+                                      speakText(danishPart ?? sentence, 'da-DK');
+                                    }}
+                                    aria-label="Hear sentence"
+                                  >
+                                    🔊
+                                  </button>
+                                </li>
+                              );
+                            })}
                           </ul>
                         ) : (
                           <button

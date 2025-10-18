@@ -1829,6 +1829,23 @@ button:disabled {
   line-height: 1.5;
 }
 
+.example-sentence-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+}
+
+.example-sentence-danish {
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.example-sentence-english {
+  color: #5c6bc0;
+  font-size: 0.9rem;
+}
+
 .vocab-speaker-button-small {
   background: transparent;
   border: none;
