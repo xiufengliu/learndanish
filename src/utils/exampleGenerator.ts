@@ -63,11 +63,14 @@ Return a JSON object:
 
 export async function generateCulturalNote(
   danishWord: string,
-  englishTranslation: string
+  englishTranslation: string,
+  audienceLanguage: 'english' | 'chinese' = 'english'
 ): Promise<string | null> {
+  const targetLanguage = audienceLanguage === 'chinese' ? 'Simplified Chinese (简体中文)' : 'English';
+  
   try {
     const prompt = `
-Analyze if the Danish word/phrase "${danishWord}" (${englishTranslation}) has any interesting cultural context, idioms, or usage notes that would help an English speaker understand Danish culture better.
+Analyze if the Danish word/phrase "${danishWord}" (${englishTranslation}) has any interesting cultural context, idioms, or usage notes that would help a ${targetLanguage} speaker understand Danish culture better.
 
 Consider:
 - Is this word culturally significant in Denmark?
@@ -76,10 +79,12 @@ Consider:
 - Are there customs or social contexts related to this word?
 - Does it reflect something unique about Danish culture?
 
+Provide your response in ${targetLanguage}.
+
 If there IS interesting cultural context, return a JSON object:
 {
   "hasCulturalNote": true,
-  "note": "2-3 sentences explaining the cultural context"
+  "note": "2-3 sentences in ${targetLanguage} explaining the cultural context"
 }
 
 If there is NO significant cultural context (just a regular everyday word), return:
