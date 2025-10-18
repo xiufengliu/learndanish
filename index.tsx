@@ -499,14 +499,19 @@ const DanishTutorApp = () => {
   };
 
   const handleGenerateStory = async () => {
+    console.log('Generate story button clicked');
     setIsGeneratingStory(true);
     setError(null);
     try {
+      console.log('Generating story with difficulty:', settings.difficultyLevel);
       const story = await generateStory(settings.difficultyLevel);
+      console.log('Story generated:', story);
       setCurrentStory(story);
       setShowStory(true);
     } catch (err) {
+      console.error('Error generating story:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate story');
+      alert(`Failed to generate story: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setIsGeneratingStory(false);
     }
@@ -673,6 +678,14 @@ const DanishTutorApp = () => {
           onClose={() => setShowGrammar(false)}
           onClearHistory={clearHistory}
         />
+      )}
+      {isGeneratingStory && (
+        <div className="story-overlay">
+          <div className="story-loading">
+            <div className="loading-spinner"></div>
+            <p>Generating your Danish story...</p>
+          </div>
+        </div>
       )}
       {showStory && currentStory && (
         <StoryView

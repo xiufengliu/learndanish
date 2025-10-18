@@ -2098,6 +2098,35 @@ button:disabled {
   backdrop-filter: blur(4px);
 }
 
+.story-loading {
+  background-color: var(--container-background);
+  border-radius: 16px;
+  padding: 3rem;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.story-loading p {
+  margin-top: 1.5rem;
+  font-size: 1.1rem;
+  color: var(--text-color);
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid var(--border-color);
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .story-panel {
   background-color: var(--container-background);
   border-radius: 16px;
