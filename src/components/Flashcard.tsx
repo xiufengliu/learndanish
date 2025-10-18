@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { VocabularyWord } from '../types/vocabulary';
+import { speakTextWithDeepgram } from '../utils/deepgramTTS';
 
 interface FlashcardProps {
   word: VocabularyWord;
@@ -9,19 +10,6 @@ interface FlashcardProps {
 
 const Flashcard: React.FC<FlashcardProps> = ({ word, onReview, showContext = true }) => {
   const [isFlipped, setIsFlipped] = useState(false);
-
-  // Ensure voices are loaded
-  React.useEffect(() => {
-    if ('speechSynthesis' in window) {
-      // Load voices
-      window.speechSynthesis.getVoices();
-      
-      // Some browsers need this event to load voices
-      window.speechSynthesis.onvoiceschanged = () => {
-        window.speechSynthesis.getVoices();
-      };
-    }
-  }, []);
 
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
@@ -43,43 +31,10 @@ const Flashcard: React.FC<FlashcardProps> = ({ word, onReview, showContext = tru
   const handleSpeak = (e: React.MouseEvent) => {
     e.stopPropagation();
     
-    if ('speechSynthesis' in window) {
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel();
-      
-      // Get available voices
-      const voices = window.speechSynthesis.getVoices();
-      
-      // Find the best Danish voice with better prioritization
-      // 1. Google Danish voice (usually better quality)
-      // 2. Local Danish voice
-      // 3. Any Danish voice
-      const danishVoice = 
-        voices.find(voice => voice.name.toLowerCase().includes('google') && voice.lang.startsWith('da')) ||
-        voices.find(voice => voice.lang === 'da-DK' && voice.localService) ||
-        voices.find(voice => voice.lang === 'da-DK') ||
-        voices.find(voice => voice.lang.startsWith('da')) ||
-        voices.find(voice => voice.lang.includes('DK'));
-      
-      // Create utterance for Danish word
-      const utterance = new SpeechSynthesisUtterance(word.danishWord);
-      utterance.lang = 'da-DK'; // Danish language
-      utterance.rate = 0.75; // Slower for better learning
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
-      
-      if (danishVoice) {
-        utterance.voice = danishVoice;
-        console.log('Using Danish voice:', danishVoice.name, '- Local:', danishVoice.localService);
-      } else {
-        console.warn('No Danish voice found. Available voices:', voices.map(v => `${v.name} (${v.lang})`));
-      }
-      
-      // Speak the word
-      window.speechSynthesis.speak(utterance);
-    } else {
-      console.warn('Text-to-speech not supported in this browser');
-    }
+    // Use Deepgram TTS for better Danish pronunciation
+    speakTextWithDeepgram(word.danishWord, 'da').catch(err => {
+      console.error('Failed to speak Danish word:', err);
+    });
   };
 
   return (
