@@ -458,6 +458,16 @@ button:disabled {
   cursor: pointer;
 }
 
+.story-tooltip .tooltip-content:not(.explanation-mode) {
+  padding-left: 4px;
+}
+
+.story-tooltip .tooltip-content:not(.explanation-mode)::first-letter {
+  font-size: 1.8em;
+  line-height: 1;
+  margin-right: 0.1em;
+}
+
 .story-tooltip .tooltip-content:not(.explanation-mode):hover {
   opacity: 0.9;
 }
