@@ -112,3 +112,85 @@ If there is NO significant cultural context (just a regular everyday word), retu
     return null;
   }
 }
+
+export async function generateGrammaticalForms(
+  danishWord: string,
+  englishTranslation: string,
+  partOfSpeech?: string
+): Promise<any | null> {
+  try {
+    const prompt = `
+Analyze the Danish word "${danishWord}" (${englishTranslation}) and provide its grammatical forms.
+${partOfSpeech ? `Part of speech: ${partOfSpeech}` : ''}
+
+Based on the word type, provide the appropriate forms:
+
+FOR VERBS, return:
+{
+  "hasGrammaticalForms": true,
+  "forms": {
+    "infinitive": "at [verb]",
+    "present": "present tense form",
+    "past": "past tense form",
+    "presentPerfect": "har/er + past participle",
+    "imperative": "imperative form"
+  }
+}
+
+FOR NOUNS, return:
+{
+  "hasGrammaticalForms": true,
+  "forms": {
+    "singular": "indefinite singular (without article)",
+    "plural": "indefinite plural",
+    "definite": "definite singular (with -en/-et)",
+    "definitePlural": "definite plural",
+    "gender": "common" or "neuter"
+  }
+}
+
+FOR ADJECTIVES, return:
+{
+  "hasGrammaticalForms": true,
+  "forms": {
+    "positive": "base form",
+    "comparative": "comparative form (-ere)",
+    "superlative": "superlative form (-est)"
+  }
+}
+
+FOR OTHER WORD TYPES (adverbs, prepositions, etc.), return:
+{
+  "hasGrammaticalForms": false
+}
+
+Only provide actual forms that exist. Be accurate with Danish grammar rules.
+`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt
+    });
+
+    const text = response.text.trim();
+    
+    // Extract JSON from response
+    let jsonText = text;
+    if (text.includes('```json')) {
+      jsonText = text.split('```json')[1].split('```')[0].trim();
+    } else if (text.includes('```')) {
+      jsonText = text.split('```')[1].split('```')[0].trim();
+    }
+
+    const parsed = JSON.parse(jsonText);
+    
+    if (parsed.hasGrammaticalForms && parsed.forms) {
+      return parsed.forms;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Failed to generate grammatical forms:', error);
+    return null;
+  }
+}

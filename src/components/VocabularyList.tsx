@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { VocabularyWord } from '../types/vocabulary';
-import { generateExampleSentences, generateCulturalNote } from '../utils/exampleGenerator';
+import { generateExampleSentences, generateCulturalNote, generateGrammaticalForms } from '../utils/exampleGenerator';
 
 interface VocabularyListProps {
   vocabulary: VocabularyWord[];
@@ -30,6 +30,7 @@ const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, on
   const [expandedWords, setExpandedWords] = useState<Set<string>>(new Set());
   const [loadingExamples, setLoadingExamples] = useState<Set<string>>(new Set());
   const [loadingCultural, setLoadingCultural] = useState<Set<string>>(new Set());
+  const [loadingGrammar, setLoadingGrammar] = useState<Set<string>>(new Set());
 
   const filteredAndSorted = vocabulary
     .filter(word => {
@@ -109,6 +110,30 @@ const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, on
       console.error('Failed to generate cultural note:', error);
     } finally {
       setLoadingCultural(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(word.id);
+        return newSet;
+      });
+    }
+  };
+
+  const handleGenerateGrammar = async (word: VocabularyWord) => {
+    if (!onUpdateWord || word.grammaticalForms) return;
+    
+    setLoadingGrammar(prev => new Set(prev).add(word.id));
+    try {
+      const forms = await generateGrammaticalForms(
+        word.danishWord,
+        word.englishTranslation,
+        word.partOfSpeech
+      );
+      if (forms) {
+        onUpdateWord(word.id, { grammaticalForms: forms });
+      }
+    } catch (error) {
+      console.error('Failed to generate grammatical forms:', error);
+    } finally {
+      setLoadingGrammar(prev => {
         const newSet = new Set(prev);
         newSet.delete(word.id);
         return newSet;
@@ -210,6 +235,89 @@ const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, on
                       <p>{word.culturalNotes}</p>
                     </div>
                   )}
+
+                  {/* Grammatical Forms Section */}
+                  {word.grammaticalForms && (
+                    <div className="vocabulary-grammar-forms">
+                      <div className="grammar-forms-header">📖 Grammar Forms</div>
+                      {word.grammaticalForms.infinitive && (
+                        <div className="grammar-forms-grid">
+                          <div className="grammar-form-item">
+                            <span className="grammar-form-label">Infinitive:</span>
+                            <span className="grammar-form-value">{word.grammaticalForms.infinitive}</span>
+                          </div>
+                          <div className="grammar-form-item">
+                            <span className="grammar-form-label">Present:</span>
+                            <span className="grammar-form-value">{word.grammaticalForms.present}</span>
+                          </div>
+                          <div className="grammar-form-item">
+                            <span className="grammar-form-label">Past:</span>
+                            <span className="grammar-form-value">{word.grammaticalForms.past}</span>
+                          </div>
+                          {word.grammaticalForms.presentPerfect && (
+                            <div className="grammar-form-item">
+                              <span className="grammar-form-label">Perfect:</span>
+                              <span className="grammar-form-value">{word.grammaticalForms.presentPerfect}</span>
+                            </div>
+                          )}
+                          {word.grammaticalForms.imperative && (
+                            <div className="grammar-form-item">
+                              <span className="grammar-form-label">Imperative:</span>
+                              <span className="grammar-form-value">{word.grammaticalForms.imperative}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {word.grammaticalForms.singular && (
+                        <div className="grammar-forms-grid">
+                          {word.grammaticalForms.gender && (
+                            <div className="grammar-form-item grammar-form-full">
+                              <span className="grammar-form-label">Gender:</span>
+                              <span className="grammar-form-value grammar-gender">
+                                {word.grammaticalForms.gender === 'common' ? 'en-word (common)' : 'et-word (neuter)'}
+                              </span>
+                            </div>
+                          )}
+                          <div className="grammar-form-item">
+                            <span className="grammar-form-label">Singular:</span>
+                            <span className="grammar-form-value">{word.grammaticalForms.singular}</span>
+                          </div>
+                          <div className="grammar-form-item">
+                            <span className="grammar-form-label">Plural:</span>
+                            <span className="grammar-form-value">{word.grammaticalForms.plural}</span>
+                          </div>
+                          {word.grammaticalForms.definite && (
+                            <div className="grammar-form-item">
+                              <span className="grammar-form-label">Definite:</span>
+                              <span className="grammar-form-value">{word.grammaticalForms.definite}</span>
+                            </div>
+                          )}
+                          {word.grammaticalForms.definitePlural && (
+                            <div className="grammar-form-item">
+                              <span className="grammar-form-label">Def. Plural:</span>
+                              <span className="grammar-form-value">{word.grammaticalForms.definitePlural}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {word.grammaticalForms.positive && (
+                        <div className="grammar-forms-grid">
+                          <div className="grammar-form-item">
+                            <span className="grammar-form-label">Positive:</span>
+                            <span className="grammar-form-value">{word.grammaticalForms.positive}</span>
+                          </div>
+                          <div className="grammar-form-item">
+                            <span className="grammar-form-label">Comparative:</span>
+                            <span className="grammar-form-value">{word.grammaticalForms.comparative}</span>
+                          </div>
+                          <div className="grammar-form-item">
+                            <span className="grammar-form-label">Superlative:</span>
+                            <span className="grammar-form-value">{word.grammaticalForms.superlative}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   
                   <div className="vocabulary-stats">
                     <span>Practiced: {word.practiceCount}x</span>
@@ -270,6 +378,19 @@ const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, on
                             disabled={loadingCultural.has(word.id) || !onUpdateWord}
                           >
                             {loadingCultural.has(word.id) ? '⏳ Checking...' : '🇩🇰 Check Cultural Context'}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Grammatical Forms */}
+                      {!word.grammaticalForms && (word.partOfSpeech === 'verb' || word.partOfSpeech === 'noun' || word.partOfSpeech === 'adjective') && (
+                        <div className="vocabulary-grammar-section">
+                          <button
+                            className="generate-button"
+                            onClick={() => handleGenerateGrammar(word)}
+                            disabled={loadingGrammar.has(word.id) || !onUpdateWord}
+                          >
+                            {loadingGrammar.has(word.id) ? '⏳ Generating...' : '📖 Generate Grammar Forms'}
                           </button>
                         </div>
                       )}
