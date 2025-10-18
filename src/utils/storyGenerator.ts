@@ -25,33 +25,34 @@ Format your response as a JSON object with this structure:
 Important: Return ONLY the JSON object, no other text.`;
 
   try {
-    return await withGenAIClient(async (genAI) => {
-      console.log('Requesting story from Gemini API...');
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-      const result = await model.generateContent(prompt);
-      const response = result.response;
-      const text = response.text();
-      
-      console.log('Received response from Gemini:', text);
-      
-      // Extract JSON from the response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        console.error('Failed to find JSON in response:', text);
-        throw new Error('Failed to parse story response - no JSON found in response');
-      }
-      
-      const parsedResponse = JSON.parse(jsonMatch[0]);
-      console.log('Parsed response:', parsedResponse);
-      
-      return {
-        id: `story-${Date.now()}`,
-        danishText: parsedResponse.danishText,
-        englishTranslation: parsedResponse.englishTranslation,
-        difficultyLevel,
-        timestamp: new Date()
-      };
-    });
+    const response = await withGenAIClient(client =>
+      client.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt
+      })
+    );
+
+    const text = response.text.trim();
+    console.log('Received response from Gemini:', text);
+    
+    // Extract JSON from response (handle markdown code blocks)
+    let jsonText = text;
+    if (text.includes('```json')) {
+      jsonText = text.split('```json')[1].split('```')[0].trim();
+    } else if (text.includes('```')) {
+      jsonText = text.split('```')[1].split('```')[0].trim();
+    }
+    
+    const parsedResponse = JSON.parse(jsonText);
+    console.log('Parsed response:', parsedResponse);
+    
+    return {
+      id: `story-${Date.now()}`,
+      danishText: parsedResponse.danishText,
+      englishTranslation: parsedResponse.englishTranslation,
+      difficultyLevel,
+      timestamp: new Date()
+    };
   } catch (error) {
     console.error('Error generating story:', error);
     // Re-throw with original error details
@@ -96,26 +97,27 @@ Format your response as a JSON array with this structure:
 Important: Return ONLY the JSON array, no other text.`;
 
   try {
-    return await withGenAIClient(async (genAI) => {
-      console.log('Requesting story explanation from Gemini API...');
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-      const result = await model.generateContent(prompt);
-      const response = result.response;
-      const text = response.text();
-      
-      console.log('Received explanation response from Gemini:', text);
-      
-      // Extract JSON from the response
-      const jsonMatch = text.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) {
-        console.error('Failed to find JSON in explanation response:', text);
-        throw new Error('Failed to parse explanation response - no JSON found in response');
-      }
-      
-      const parsedResponse = JSON.parse(jsonMatch[0]);
-      console.log('Parsed explanation:', parsedResponse);
-      return parsedResponse;
-    });
+    const response = await withGenAIClient(client =>
+      client.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt
+      })
+    );
+
+    const text = response.text.trim();
+    console.log('Received explanation response from Gemini:', text);
+    
+    // Extract JSON from response (handle markdown code blocks)
+    let jsonText = text;
+    if (text.includes('```json')) {
+      jsonText = text.split('```json')[1].split('```')[0].trim();
+    } else if (text.includes('```')) {
+      jsonText = text.split('```')[1].split('```')[0].trim();
+    }
+    
+    const parsedResponse = JSON.parse(jsonText);
+    console.log('Parsed explanation:', parsedResponse);
+    return parsedResponse;
   } catch (error) {
     console.error('Error generating explanation:', error);
     // Re-throw with original error details
