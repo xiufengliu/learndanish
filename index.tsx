@@ -503,8 +503,8 @@ const DanishTutorApp = () => {
     setIsGeneratingStory(true);
     setError(null);
     try {
-      console.log('Generating story with difficulty:', settings.difficultyLevel);
-      const story = await generateStory(settings.difficultyLevel);
+      console.log('Generating story with difficulty:', settings.difficultyLevel, 'language:', settings.audienceLanguage);
+      const story = await generateStory(settings.difficultyLevel, settings.audienceLanguage);
       console.log('Story generated:', story);
       setCurrentStory(story);
       setShowStory(true);
@@ -690,6 +690,7 @@ const DanishTutorApp = () => {
       {showStory && currentStory && (
         <StoryView
           story={currentStory}
+          audienceLanguage={settings.audienceLanguage}
           onClose={() => setShowStory(false)}
         />
       )}

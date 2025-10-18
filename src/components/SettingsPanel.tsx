@@ -62,6 +62,25 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdateSetting
             </div>
           </div>
 
+          {/* Audience Language */}
+          <div className="setting-group">
+            <label>Audience Language</label>
+            <div className="radio-group">
+              {(['english', 'chinese'] as const).map(lang => (
+                <label key={lang} className="radio-label">
+                  <input
+                    type="radio"
+                    name="audienceLanguage"
+                    value={lang}
+                    checked={settings.audienceLanguage === lang}
+                    onChange={(e) => onUpdateSettings({ audienceLanguage: e.target.value as any })}
+                  />
+                  <span>{lang === 'english' ? 'English' : '中文 (Chinese)'}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
           {/* Feature Toggles */}
           <div className="setting-group">
             <label className="checkbox-label">

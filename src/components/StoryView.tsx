@@ -4,10 +4,11 @@ import { generateStoryExplanation } from '../utils/storyGenerator';
 
 interface StoryViewProps {
   story: Story;
+  audienceLanguage: 'english' | 'chinese';
   onClose: () => void;
 }
 
-const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
+const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose }) => {
   const [showExplanation, setShowExplanation] = useState(false);
   const [explanation, setExplanation] = useState<StoryExplanation[] | null>(null);
   const [isLoadingExplanation, setIsLoadingExplanation] = useState(false);
@@ -25,20 +26,20 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
     
     setIsLoadingExplanation(true);
     try {
-      const explanationData = await generateStoryExplanation(lastClickedSentence);
+      const explanationData = await generateStoryExplanation(lastClickedSentence, audienceLanguage);
       
       // Format explanation as readable text for the tooltip
       let explanationText = '';
       explanationData.forEach((sentenceExpl, idx) => {
         if (idx > 0) explanationText += '\n\n---\n\n';
         explanationText += `📝 ${sentenceExpl.sentence}\n`;
-        explanationText += `🇬🇧 ${sentenceExpl.translation}\n\n`;
+        explanationText += `${audienceLanguage === 'chinese' ? '🇨🇳' : '🇬🇧'} ${sentenceExpl.translation}\n\n`;
         
         sentenceExpl.grammarPoints.forEach((point, pidx) => {
           explanationText += `${pidx + 1}. [${point.type.toUpperCase()}]\n`;
           explanationText += `   ${point.description}\n`;
           if (point.example) {
-            explanationText += `   Example: ${point.example}\n`;
+            explanationText += `   ${audienceLanguage === 'chinese' ? '例子' : 'Example'}: ${point.example}\n`;
           }
           explanationText += '\n';
         });
@@ -52,7 +53,7 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
     } catch (err) {
       setTooltip(current => ({ 
         ...current, 
-        text: `Error: ${err instanceof Error ? err.message : 'Failed to generate explanation'}`,
+        text: `${audienceLanguage === 'chinese' ? '错误' : 'Error'}: ${err instanceof Error ? err.message : 'Failed to generate explanation'}`,
         isExplanation: false
       }));
     } finally {

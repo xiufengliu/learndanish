@@ -1,12 +1,17 @@
 import { withGenAIClient } from './genAIClient';
 import type { Story, StoryExplanation } from '../types/story';
 
-export async function generateStory(difficultyLevel: 'beginner' | 'intermediate' | 'advanced'): Promise<Story> {
+export async function generateStory(
+  difficultyLevel: 'beginner' | 'intermediate' | 'advanced',
+  audienceLanguage: 'english' | 'chinese' = 'english'
+): Promise<Story> {
   const difficultyDescriptions = {
     beginner: 'very simple vocabulary and basic sentence structures (present tense, simple past)',
     intermediate: 'moderate vocabulary with some compound sentences and various tenses',
     advanced: 'complex vocabulary with sophisticated grammar structures and idiomatic expressions'
   };
+
+  const translationLanguage = audienceLanguage === 'chinese' ? 'Chinese (中文)' : 'English';
 
   const prompt = `Generate a short Danish story (5-7 sentences) at ${difficultyLevel} level.
 
@@ -14,12 +19,12 @@ Requirements:
 - Use ${difficultyDescriptions[difficultyLevel]}
 - Make it interesting and engaging
 - Include cultural elements when appropriate
-- Provide an English translation
+- Provide translation in ${translationLanguage}
 
 Format your response as a JSON object with this structure:
 {
   "danishText": "The complete Danish story with each sentence on a new line",
-  "englishTranslation": "The complete English translation with each sentence on a new line"
+  "${audienceLanguage === 'chinese' ? 'chineseTranslation' : 'englishTranslation'}": "The complete ${translationLanguage} translation with each sentence on a new line"
 }
 
 Important: Return ONLY the JSON object, no other text.`;
@@ -46,10 +51,15 @@ Important: Return ONLY the JSON object, no other text.`;
     const parsedResponse = JSON.parse(jsonText);
     console.log('Parsed response:', parsedResponse);
     
+    // Get translation from the appropriate field
+    const translation = audienceLanguage === 'chinese' 
+      ? parsedResponse.chineseTranslation 
+      : parsedResponse.englishTranslation;
+    
     return {
       id: `story-${Date.now()}`,
       danishText: parsedResponse.danishText,
-      englishTranslation: parsedResponse.englishTranslation,
+      englishTranslation: translation, // Using englishTranslation field for both languages for consistency
       difficultyLevel,
       timestamp: new Date()
     };
@@ -63,16 +73,21 @@ Important: Return ONLY the JSON object, no other text.`;
   }
 }
 
-export async function generateStoryExplanation(danishText: string): Promise<StoryExplanation[]> {
-  const prompt = `Analyze this Danish text sentence by sentence and provide detailed grammar explanations.
+export async function generateStoryExplanation(
+  danishText: string,
+  audienceLanguage: 'english' | 'chinese' = 'english'
+): Promise<StoryExplanation[]> {
+  const translationLanguage = audienceLanguage === 'chinese' ? 'Chinese (中文)' : 'English';
+  
+  const prompt = `Analyze this Danish text sentence by sentence and provide detailed grammar explanations in ${translationLanguage}.
 
 Danish text:
 ${danishText}
 
 For each sentence, provide:
 1. The Danish sentence
-2. English translation
-3. Grammar points explaining:
+2. ${translationLanguage} translation
+3. Grammar points explaining in ${translationLanguage}:
    - Verb usage (tense, form, conjugation)
    - Noun usage (gender, definiteness, plural)
    - Sentence structure and word order
@@ -83,18 +98,18 @@ Format your response as a JSON array with this structure:
 [
   {
     "sentence": "Danish sentence",
-    "translation": "English translation",
+    "translation": "${translationLanguage} translation",
     "grammarPoints": [
       {
         "type": "verb|noun|tense|word-order|article|other",
-        "description": "Detailed explanation",
+        "description": "Detailed explanation in ${translationLanguage}",
         "example": "Optional example"
       }
     ]
   }
 ]
 
-Important: Return ONLY the JSON array, no other text.`;
+Important: Return ONLY the JSON array, no other text. All explanations and translations must be in ${translationLanguage}.`;
 
   try {
     const response = await withGenAIClient(client =>
