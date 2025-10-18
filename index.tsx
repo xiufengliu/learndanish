@@ -6,6 +6,7 @@ import SettingsPanel from './src/components/SettingsPanel';
 import VocabularyList from './src/components/VocabularyList';
 import FlashcardView from './src/components/FlashcardView';
 import GrammarPanel from './src/components/GrammarPanel';
+import StoryView from './src/components/StoryView';
 import { retryWithBackoff } from './src/utils/retryLogic';
 import { withGenAIClient } from './src/utils/genAIClient';
 import { useTheme } from './src/hooks/useTheme';
@@ -17,6 +18,8 @@ import { useGrammarTracking } from './src/hooks/useGrammarTracking';
 import { generateSystemInstruction } from './src/utils/systemPrompt';
 import { analyzeGrammar } from './src/utils/grammarAnalyzer';
 import { useWakeLock } from './src/hooks/useWakeLock';
+import { generateStory } from './src/utils/storyGenerator';
+import type { Story } from './src/types/story';
 
 // --- Audio Helper Functions (as per guidelines) ---
 
@@ -92,6 +95,9 @@ const DanishTutorApp = () => {
   const [showVocabulary, setShowVocabulary] = useState(false);
   const [showFlashcards, setShowFlashcards] = useState(false);
   const [showGrammar, setShowGrammar] = useState(false);
+  const [showStory, setShowStory] = useState(false);
+  const [currentStory, setCurrentStory] = useState<Story | null>(null);
+  const [isGeneratingStory, setIsGeneratingStory] = useState(false);
   
   const dueWords = getDueWords(vocabulary);
   
@@ -492,6 +498,20 @@ const DanishTutorApp = () => {
     }
   };
 
+  const handleGenerateStory = async () => {
+    setIsGeneratingStory(true);
+    setError(null);
+    try {
+      const story = await generateStory(settings.difficultyLevel);
+      setCurrentStory(story);
+      setShowStory(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate story');
+    } finally {
+      setIsGeneratingStory(false);
+    }
+  };
+
   return (
     <div className={`container ${isMaximized ? 'maximized' : ''}`}>
       <div className="title-bar">
@@ -543,6 +563,15 @@ const DanishTutorApp = () => {
             {dueWords.length > 0 && (
               <span className="vocab-badge">{dueWords.length}</span>
             )}
+          </button>
+          <button
+            className="story-button"
+            onClick={handleGenerateStory}
+            disabled={isGeneratingStory}
+            aria-label="Generate story"
+            title="Generate a Danish story"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true"><path d="M96 96c0-35.3 28.7-64 64-64H448c35.3 0 64 28.7 64 64V416c0 35.3-28.7 64-64 64H80c-44.2 0-80-35.8-80-80V128c0-17.7 14.3-32 32-32s32 14.3 32 32V400c0 8.8 7.2 16 16 16s16-7.2 16-16V96zm64 24v80c0 13.3 10.7 24 24 24H296c13.3 0 24-10.7 24-24V120c0-13.3-10.7-24-24-24H184c-13.3 0-24 10.7-24 24zm208-8c0 8.8 7.2 16 16 16h48c8.8 0 16-7.2 16-16s-7.2-16-16-16H384c-8.8 0-16 7.2-16 16zm0 96c0 8.8 7.2 16 16 16h48c8.8 0 16-7.2 16-16s-7.2-16-16-16H384c-8.8 0-16 7.2-16 16zM160 304c0 8.8 7.2 16 16 16H432c8.8 0 16-7.2 16-16s-7.2-16-16-16H176c-8.8 0-16 7.2-16 16zm0 96c0 8.8 7.2 16 16 16H432c8.8 0 16-7.2 16-16s-7.2-16-16-16H176c-8.8 0-16 7.2-16 16z"/></svg>
           </button>
           <button
             className="settings-button"
@@ -643,6 +672,12 @@ const DanishTutorApp = () => {
           corrections={grammarHistory}
           onClose={() => setShowGrammar(false)}
           onClearHistory={clearHistory}
+        />
+      )}
+      {showStory && currentStory && (
+        <StoryView
+          story={currentStory}
+          onClose={() => setShowStory(false)}
         />
       )}
     </div>
