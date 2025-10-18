@@ -73,7 +73,7 @@ const DanishTutorApp = () => {
   const { settings, updateSettings } = useSettings();
   const { vocabulary, extractAndAddVocabulary, deleteWord, updateWord } = useVocabularyTracker();
   const { getDueWords } = useSpacedRepetition();
-  const { grammarHistory, addCorrections } = useGrammarTracking();
+  const { grammarHistory, addCorrections, clearHistory } = useGrammarTracking();
   const { isSupported: wakeLockSupported, requestWakeLock, releaseWakeLock } = useWakeLock();
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>(() => {
     try {
@@ -641,6 +641,7 @@ const DanishTutorApp = () => {
         <GrammarPanel
           corrections={grammarHistory}
           onClose={() => setShowGrammar(false)}
+          onClearHistory={clearHistory}
         />
       )}
     </div>
