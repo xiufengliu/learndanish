@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { VocabularyWord } from '../types/vocabulary';
+import { generateExampleSentences, generateCulturalNote } from '../utils/exampleGenerator';
 
 interface VocabularyListProps {
   vocabulary: VocabularyWord[];
   onClose: () => void;
   onDeleteWord?: (id: string) => void;
+  onUpdateWord?: (id: string, updates: Partial<VocabularyWord>) => void;
 }
 
 const speakText = (text: string, lang: string = 'da-DK') => {
@@ -21,10 +23,13 @@ const speakText = (text: string, lang: string = 'da-DK') => {
 type SortBy = 'recent' | 'alphabetical' | 'proficiency';
 type FilterBy = 'all' | 'new' | 'learning' | 'familiar' | 'mastered';
 
-const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, onDeleteWord }) => {
+const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, onDeleteWord, onUpdateWord }) => {
   const [sortBy, setSortBy] = useState<SortBy>('recent');
   const [filterBy, setFilterBy] = useState<FilterBy>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedWords, setExpandedWords] = useState<Set<string>>(new Set());
+  const [loadingExamples, setLoadingExamples] = useState<Set<string>>(new Set());
+  const [loadingCultural, setLoadingCultural] = useState<Set<string>>(new Set());
 
   const filteredAndSorted = vocabulary
     .filter(word => {
@@ -56,6 +61,58 @@ const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, on
       case 'familiar': return '#81c995';
       case 'mastered': return '#1e8e3e';
       default: return '#5f6368';
+    }
+  };
+
+  const toggleExpanded = (wordId: string) => {
+    const newExpanded = new Set(expandedWords);
+    if (newExpanded.has(wordId)) {
+      newExpanded.delete(wordId);
+    } else {
+      newExpanded.add(wordId);
+    }
+    setExpandedWords(newExpanded);
+  };
+
+  const handleGenerateExamples = async (word: VocabularyWord) => {
+    if (!onUpdateWord || word.exampleSentences) return;
+    
+    setLoadingExamples(prev => new Set(prev).add(word.id));
+    try {
+      const examples = await generateExampleSentences(
+        word.danishWord,
+        word.englishTranslation,
+        word.partOfSpeech
+      );
+      onUpdateWord(word.id, { exampleSentences: examples });
+    } catch (error) {
+      console.error('Failed to generate examples:', error);
+    } finally {
+      setLoadingExamples(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(word.id);
+        return newSet;
+      });
+    }
+  };
+
+  const handleGenerateCultural = async (word: VocabularyWord) => {
+    if (!onUpdateWord || word.culturalNotes) return;
+    
+    setLoadingCultural(prev => new Set(prev).add(word.id));
+    try {
+      const note = await generateCulturalNote(word.danishWord, word.englishTranslation);
+      if (note) {
+        onUpdateWord(word.id, { culturalNotes: note });
+      }
+    } catch (error) {
+      console.error('Failed to generate cultural note:', error);
+    } finally {
+      setLoadingCultural(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(word.id);
+        return newSet;
+      });
     }
   };
 
@@ -145,10 +202,80 @@ const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, on
                       </svg>
                     </button>
                   </div>
+
+                  {/* Cultural Notes Section */}
+                  {word.culturalNotes && (
+                    <div className="vocabulary-cultural-note">
+                      <div className="cultural-note-header">🇩🇰 Cultural Note</div>
+                      <p>{word.culturalNotes}</p>
+                    </div>
+                  )}
+                  
                   <div className="vocabulary-stats">
                     <span>Practiced: {word.practiceCount}x</span>
                     <span>Next review: {new Date(word.srsData.nextReviewDate).toLocaleDateString()}</span>
                   </div>
+
+                  {/* Expandable section for additional features */}
+                  <div className="vocabulary-actions">
+                    <button
+                      className="vocab-expand-button"
+                      onClick={() => toggleExpanded(word.id)}
+                      aria-label={expandedWords.has(word.id) ? 'Show less' : 'Show more'}
+                    >
+                      {expandedWords.has(word.id) ? '▼ Show Less' : '▶ More Examples & Notes'}
+                    </button>
+                  </div>
+
+                  {expandedWords.has(word.id) && (
+                    <div className="vocabulary-expanded">
+                      {/* Example Sentences */}
+                      <div className="vocabulary-examples-section">
+                        <h4>Example Sentences</h4>
+                        {word.exampleSentences && word.exampleSentences.length > 0 ? (
+                          <ul className="example-sentences-list">
+                            {word.exampleSentences.map((sentence, idx) => (
+                              <li key={idx}>
+                                {sentence}
+                                <button
+                                  className="vocab-speaker-button-small"
+                                  onClick={() => {
+                                    const danishPart = sentence.split(' - ')[0];
+                                    speakText(danishPart, 'da-DK');
+                                  }}
+                                  aria-label="Hear sentence"
+                                >
+                                  🔊
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <button
+                            className="generate-button"
+                            onClick={() => handleGenerateExamples(word)}
+                            disabled={loadingExamples.has(word.id) || !onUpdateWord}
+                          >
+                            {loadingExamples.has(word.id) ? '⏳ Generating...' : '✨ Generate Examples'}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Cultural Notes */}
+                      {!word.culturalNotes && (
+                        <div className="vocabulary-cultural-section">
+                          <button
+                            className="generate-button"
+                            onClick={() => handleGenerateCultural(word)}
+                            disabled={loadingCultural.has(word.id) || !onUpdateWord}
+                          >
+                            {loadingCultural.has(word.id) ? '⏳ Checking...' : '🇩🇰 Check Cultural Context'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {onDeleteWord && (
                     <button
                       className="delete-word-button"

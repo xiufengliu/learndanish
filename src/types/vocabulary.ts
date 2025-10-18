@@ -21,6 +21,8 @@ export interface VocabularyWord {
   srsData: SRSData;
   relatedWords?: string[]; // IDs of related vocabulary
   topicTags?: string[];
+  exampleSentences?: string[]; // Additional example sentences
+  culturalNotes?: string; // Cultural context about the word/phrase
 }
 
 export interface SRSReview {

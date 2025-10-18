@@ -5,13 +5,16 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import SettingsPanel from './src/components/SettingsPanel';
 import VocabularyList from './src/components/VocabularyList';
 import FlashcardView from './src/components/FlashcardView';
+import GrammarPanel from './src/components/GrammarPanel';
 import { retryWithBackoff } from './src/utils/retryLogic';
 import { useTheme } from './src/hooks/useTheme';
 import { useSettings } from './src/hooks/useSettings';
 import { useVocabularyTracker } from './src/hooks/useVocabularyTracker';
 import { useSpacedRepetition } from './src/hooks/useSpacedRepetition';
 import { useKeyboardShortcuts, ShortcutHandler } from './src/hooks/useKeyboardShortcuts';
+import { useGrammarTracking } from './src/hooks/useGrammarTracking';
 import { generateSystemInstruction } from './src/utils/systemPrompt';
+import { analyzeGrammar } from './src/utils/grammarAnalyzer';
 
 // --- Audio Helper Functions (as per guidelines) ---
 
@@ -69,6 +72,7 @@ const DanishTutorApp = () => {
   const { settings, updateSettings } = useSettings();
   const { vocabulary, extractAndAddVocabulary, deleteWord, updateWord } = useVocabularyTracker();
   const { getDueWords } = useSpacedRepetition();
+  const { grammarHistory, addCorrections } = useGrammarTracking();
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>(() => {
     try {
       const savedHistory = localStorage.getItem(CHAT_HISTORY_KEY);
@@ -85,6 +89,7 @@ const DanishTutorApp = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showVocabulary, setShowVocabulary] = useState(false);
   const [showFlashcards, setShowFlashcards] = useState(false);
+  const [showGrammar, setShowGrammar] = useState(false);
   
   const dueWords = getDueWords(vocabulary);
 
@@ -137,6 +142,12 @@ const DanishTutorApp = () => {
       ctrl: true,
       handler: () => setShowFlashcards(true),
       description: 'Open flashcards'
+    },
+    {
+      key: 'g',
+      ctrl: true,
+      handler: () => setShowGrammar(true),
+      description: 'Open grammar corrections'
     }
   ];
 
@@ -186,6 +197,17 @@ const DanishTutorApp = () => {
   
             if(fullInput) {
               setChatHistory(prev => [...prev, {role: 'user', text: fullInput}]);
+              
+              // Analyze grammar if corrections are enabled
+              if (settings.grammarCorrections && fullInput.length > 5) {
+                analyzeGrammar(fullInput).then(analysis => {
+                  if (analysis.hasErrors && analysis.corrections.length > 0) {
+                    addCorrections(analysis.corrections);
+                  }
+                }).catch(err => 
+                  console.error('Failed to analyze grammar:', err)
+                );
+              }
             }
             if(fullOutput) {
               setChatHistory(prev => [...prev, {role: 'model', text: fullOutput}]);
@@ -562,6 +584,7 @@ const DanishTutorApp = () => {
           vocabulary={vocabulary}
           onClose={() => setShowVocabulary(false)}
           onDeleteWord={deleteWord}
+          onUpdateWord={updateWord}
         />
       )}
       {showFlashcards && (
@@ -569,6 +592,12 @@ const DanishTutorApp = () => {
           vocabulary={dueWords.length > 0 ? dueWords : vocabulary}
           onClose={() => setShowFlashcards(false)}
           onUpdateWord={updateWord}
+        />
+      )}
+      {showGrammar && (
+        <GrammarPanel
+          corrections={grammarHistory}
+          onClose={() => setShowGrammar(false)}
         />
       )}
     </div>
