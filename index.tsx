@@ -366,7 +366,24 @@ const DanishTutorApp = () => {
     };
   };
 
-  const handleTooltipClose = (e: React.MouseEvent) => {
+  const handleTooltipTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    // Don't start dragging if touching the close button
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('tooltip-close') || target.closest('.tooltip-close')) {
+      return;
+    }
+    
+    e.stopPropagation();
+    
+    const touch = e.touches[0];
+    setIsDraggingTooltip(true);
+    tooltipDragOffsetRef.current = {
+      x: touch.clientX - tooltip.x,
+      y: touch.clientY - tooltip.y
+    };
+  };
+
+  const handleTooltipClose = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     e.preventDefault();
     setTooltip({ visible: false, text: '', x: 0, y: 0 });
@@ -382,17 +399,33 @@ const DanishTutorApp = () => {
       }));
     };
 
-    const handleMouseUp = () => {
+    const handleTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      setTooltip(current => ({
+        ...current,
+        x: touch.clientX - tooltipDragOffsetRef.current.x,
+        y: touch.clientY - tooltipDragOffsetRef.current.y
+      }));
+    };
+
+    const handleEnd = () => {
       setIsDraggingTooltip(false);
     };
 
     if (isDraggingTooltip) {
       document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('mouseup', handleEnd);
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleEnd);
+      document.addEventListener('touchcancel', handleEnd);
       
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('mouseup', handleEnd);
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleEnd);
+        document.removeEventListener('touchcancel', handleEnd);
       };
     }
   }, [isDraggingTooltip]);
@@ -504,12 +537,15 @@ const DanishTutorApp = () => {
             left: `${tooltip.x}px`
           }}
           onMouseDown={handleTooltipMouseDown}
+          onTouchStart={handleTooltipTouchStart}
         >
           <div className="tooltip-content">{tooltip.text}</div>
           <button 
             className="tooltip-close" 
             onClick={handleTooltipClose}
+            onTouchEnd={handleTooltipClose}
             onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
           >
             ×
           </button>

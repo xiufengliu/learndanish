@@ -312,6 +312,7 @@ button:disabled {
   pointer-events: auto;
   cursor: grab;
   padding: 32px 16px 16px 16px;
+  touch-action: none;
 }
 
 .draggable-tooltip:active {
