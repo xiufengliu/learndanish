@@ -9,7 +9,7 @@ interface UseVocabularyTrackerResult {
   addWord: (word: Omit<VocabularyWord, 'id' | 'srsData'>) => void;
   updateWord: (id: string, updates: Partial<VocabularyWord>) => void;
   getWordsDueForReview: () => VocabularyWord[];
-  extractAndAddVocabulary: (message: string, context: string) => Promise<void>;
+  extractAndAddVocabulary: (message: string, context: string, audienceLanguage?: 'english' | 'chinese') => Promise<void>;
   deleteWord: (id: string) => void;
   clearAllWords: () => void;
 }
@@ -91,9 +91,9 @@ export function useVocabularyTracker(): UseVocabularyTrackerResult {
     );
   }, [vocabulary]);
 
-  const extractAndAddVocabulary = useCallback(async (message: string, context: string) => {
+  const extractAndAddVocabulary = useCallback(async (message: string, context: string, audienceLanguage: 'english' | 'chinese' = 'english') => {
     try {
-      const extractedWords = await extractVocabularyFromMessage(message, context);
+      const extractedWords = await extractVocabularyFromMessage(message, context, audienceLanguage);
       
       for (const word of extractedWords) {
         addWord({

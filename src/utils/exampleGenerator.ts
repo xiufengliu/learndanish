@@ -5,8 +5,11 @@ import { withGenAIClient } from './genAIClient';
 export async function generateExampleSentences(
   danishWord: string,
   englishTranslation: string,
-  partOfSpeech?: string
+  partOfSpeech?: string,
+  audienceLanguage: 'english' | 'chinese' = 'english'
 ): Promise<string[]> {
+  const targetLanguage = audienceLanguage === 'chinese' ? 'Chinese (中文)' : 'English';
+  
   try {
     const prompt = `
 Generate 4-5 diverse example sentences using the Danish word "${danishWord}" (${englishTranslation}).
@@ -17,14 +20,14 @@ Requirements:
 - Show different tenses if it's a verb
 - Vary sentence complexity (simple to intermediate)
 - Make them practical and useful for learners
-- Include the English translation after each Danish sentence
+- Include the ${targetLanguage} translation after each Danish sentence
 
 Return a JSON object:
 {
   "sentences": [
     {
       "danish": "Danish sentence here",
-      "english": "English translation here"
+      "${audienceLanguage === 'chinese' ? 'chinese' : 'english'}": "${targetLanguage} translation here"
     }
   ]
 }

@@ -245,7 +245,7 @@ const DanishTutorApp = () => {
                 
                 // Extract vocabulary from model response if enabled
                 if (settings.vocabularyTracking) {
-                  extractAndAddVocabulary(fullOutput, fullInput).catch(err => 
+                  extractAndAddVocabulary(fullOutput, fullInput, settings.audienceLanguage).catch(err => 
                     console.error('Failed to extract vocabulary:', err)
                   );
                 }
@@ -379,11 +379,12 @@ const DanishTutorApp = () => {
     } else {
       setTooltip({ visible: true, text: 'Translating...', x, y });
       try {
+        const targetLanguage = settings.audienceLanguage === 'chinese' ? 'Chinese (中文)' : 'English';
         const translation = await retryWithBackoff(async () => {
           const response = await withGenAIClient(client =>
             client.models.generateContent({
               model: 'gemini-2.5-flash',
-              contents: `Translate the following Danish text to English. Provide only the translation, without any additional formatting or commentary. Danish: "${message.text}"`
+              contents: `Translate the following Danish text to ${targetLanguage}. Provide only the translation, without any additional formatting or commentary. Danish: "${message.text}"`
             })
           );
           return response.text;

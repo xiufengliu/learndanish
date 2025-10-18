@@ -5,14 +5,17 @@ import { withGenAIClient } from './genAIClient';
 
 interface ExtractedWord {
   danishWord: string;
-  englishTranslation: string;
+  englishTranslation: string; // Note: Will contain translation in audience language
   partOfSpeech?: string;
 }
 
 export async function extractVocabularyFromMessage(
   message: string,
-  context: string
+  context: string,
+  audienceLanguage: 'english' | 'chinese' = 'english'
 ): Promise<Omit<VocabularyWord, 'id' | 'firstEncountered' | 'lastPracticed' | 'practiceCount' | 'proficiencyLevel' | 'srsData'>[]> {
+  const targetLanguage = audienceLanguage === 'chinese' ? 'Chinese (中文)' : 'English';
+  
   try {
     const prompt = `
 Extract key Danish vocabulary words from the following message. 
@@ -21,7 +24,7 @@ Return a JSON array of objects with this structure:
   "words": [
     {
       "danishWord": "word in Danish",
-      "englishTranslation": "English translation",
+      "englishTranslation": "${targetLanguage} translation",
       "partOfSpeech": "noun|verb|adjective|adverb|etc"
     }
   ]
@@ -30,6 +33,7 @@ Return a JSON array of objects with this structure:
 Only extract important vocabulary words (nouns, verbs, adjectives, adverbs).
 Skip common words like "og", "er", "det", "en", "at", etc.
 Limit to 5 most important words.
+All translations must be in ${targetLanguage}.
 
 Message: "${message}"
 Context: "${context}"
