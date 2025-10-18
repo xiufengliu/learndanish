@@ -3,7 +3,12 @@
 import { GrammarAnalysis, GrammarCorrection } from '../types/grammar';
 import { withGenAIClient } from './genAIClient';
 
-export async function analyzeGrammar(userText: string): Promise<GrammarAnalysis> {
+export async function analyzeGrammar(
+  userText: string,
+  audienceLanguage: 'english' | 'chinese' = 'english'
+): Promise<GrammarAnalysis> {
+  const targetLanguage = audienceLanguage === 'chinese' ? 'Simplified Chinese (简体中文)' : 'English';
+  
   try {
     const prompt = `
 Analyze the following Danish text for grammar mistakes. If there are errors, provide corrections with detailed explanations.
@@ -15,9 +20,9 @@ Return a JSON object with this structure:
     {
       "originalText": "the incorrect phrase",
       "correctedText": "the correct phrase",
-      "explanation": "Clear explanation of what was wrong and why",
-      "rule": "The grammar rule being violated",
-      "examples": ["Example 1 showing correct usage", "Example 2 showing correct usage"],
+      "explanation": "Clear explanation in ${targetLanguage} of what was wrong and why",
+      "rule": "The grammar rule being violated (in ${targetLanguage})",
+      "examples": ["Example 1 showing correct usage (in ${targetLanguage})", "Example 2 showing correct usage (in ${targetLanguage})"],
       "category": "verb|noun|adjective|word-order|preposition|article|other"
     }
   ]
@@ -27,7 +32,7 @@ Only include actual grammar mistakes. If the text is grammatically correct, retu
 
 Danish text to analyze: "${userText}"
 
-Provide explanations in English so the learner understands the mistake clearly.
+Provide all explanations, rules, and examples in ${targetLanguage} so the learner understands the mistake clearly.
 `;
 
     const response = await withGenAIClient(client =>

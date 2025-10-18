@@ -231,7 +231,7 @@ const DanishTutorApp = () => {
                 
                 // Analyze grammar if corrections are enabled
                 if (settings.grammarCorrections && fullInput.length > 5) {
-                  analyzeGrammar(fullInput).then(analysis => {
+                  analyzeGrammar(fullInput, settings.audienceLanguage).then(analysis => {
                     if (analysis.hasErrors && analysis.corrections.length > 0) {
                       addCorrections(analysis.corrections);
                     }
