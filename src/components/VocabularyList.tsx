@@ -7,6 +7,7 @@ interface VocabularyListProps {
   onClose: () => void;
   onDeleteWord?: (id: string) => void;
   onUpdateWord?: (id: string, updates: Partial<VocabularyWord>) => void;
+  onClearAll?: () => void;
 }
 
 const speakText = (text: string, lang: string = 'da-DK') => {
@@ -23,7 +24,7 @@ const speakText = (text: string, lang: string = 'da-DK') => {
 type SortBy = 'recent' | 'alphabetical' | 'proficiency';
 type FilterBy = 'all' | 'new' | 'learning' | 'familiar' | 'mastered';
 
-const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, onDeleteWord, onUpdateWord }) => {
+const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, onDeleteWord, onUpdateWord, onClearAll }) => {
   const [sortBy, setSortBy] = useState<SortBy>('recent');
   const [filterBy, setFilterBy] = useState<FilterBy>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,6 +32,12 @@ const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, on
   const [loadingExamples, setLoadingExamples] = useState<Set<string>>(new Set());
   const [loadingCultural, setLoadingCultural] = useState<Set<string>>(new Set());
   const [loadingGrammar, setLoadingGrammar] = useState<Set<string>>(new Set());
+
+  const handleClearAll = () => {
+    if (vocabulary.length > 0 && window.confirm('Are you sure you want to delete all vocabulary words? This cannot be undone.')) {
+      onClearAll?.();
+    }
+  };
 
   const filteredAndSorted = vocabulary
     .filter(word => {
@@ -146,11 +153,25 @@ const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, on
       <div className="vocabulary-panel" onClick={(e) => e.stopPropagation()}>
         <div className="vocabulary-header">
           <h2>Vocabulary ({vocabulary.length} words)</h2>
-          <button className="close-button" onClick={onClose} aria-label="Close vocabulary">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" aria-hidden="true">
-              <path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z" />
-            </svg>
-          </button>
+          <div className="vocabulary-header-actions">
+            {vocabulary.length > 0 && onClearAll && (
+              <button 
+                className="clear-all-button" 
+                onClick={handleClearAll}
+                aria-label="Clear all vocabulary"
+                title="Clear all vocabulary"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" aria-hidden="true">
+                  <path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"/>
+                </svg>
+              </button>
+            )}
+            <button className="close-button" onClick={onClose} aria-label="Close vocabulary">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" aria-hidden="true">
+                <path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div className="vocabulary-controls">

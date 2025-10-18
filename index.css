@@ -817,6 +817,12 @@ button:disabled {
   color: var(--text-color);
 }
 
+.vocabulary-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .vocabulary-controls {
   padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--border-color);

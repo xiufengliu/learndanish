@@ -71,7 +71,7 @@ const CHAT_HISTORY_KEY = 'danishTutorHistory';
 const DanishTutorApp = () => {
   const { theme, toggleTheme } = useTheme();
   const { settings, updateSettings } = useSettings();
-  const { vocabulary, extractAndAddVocabulary, deleteWord, updateWord } = useVocabularyTracker();
+  const { vocabulary, extractAndAddVocabulary, deleteWord, updateWord, clearAllWords } = useVocabularyTracker();
   const { getDueWords } = useSpacedRepetition();
   const { grammarHistory, addCorrections, clearHistory } = useGrammarTracking();
   const { isSupported: wakeLockSupported, requestWakeLock, releaseWakeLock } = useWakeLock();
@@ -628,6 +628,7 @@ const DanishTutorApp = () => {
           onClose={() => setShowVocabulary(false)}
           onDeleteWord={deleteWord}
           onUpdateWord={updateWord}
+          onClearAll={clearAllWords}
         />
       )}
       {showFlashcards && (

@@ -11,6 +11,7 @@ interface UseVocabularyTrackerResult {
   getWordsDueForReview: () => VocabularyWord[];
   extractAndAddVocabulary: (message: string, context: string) => Promise<void>;
   deleteWord: (id: string) => void;
+  clearAllWords: () => void;
 }
 
 function createInitialSRSData(): SRSData {
@@ -78,6 +79,11 @@ export function useVocabularyTracker(): UseVocabularyTrackerResult {
     });
   }, []);
 
+  const clearAllWords = useCallback(() => {
+    setVocabulary([]);
+    StorageManager.removeItem(STORAGE_KEYS.VOCABULARY);
+  }, []);
+
   const getWordsDueForReview = useCallback(() => {
     const now = new Date();
     return vocabulary.filter(word => 
@@ -109,6 +115,7 @@ export function useVocabularyTracker(): UseVocabularyTrackerResult {
     updateWord,
     getWordsDueForReview,
     extractAndAddVocabulary,
-    deleteWord
+    deleteWord,
+    clearAllWords
   };
 }
