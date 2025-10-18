@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Story, StoryExplanation } from '../types/story';
 import { generateStoryExplanation } from '../utils/storyGenerator';
 
@@ -12,6 +12,9 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
   const [explanation, setExplanation] = useState<StoryExplanation[] | null>(null);
   const [isLoadingExplanation, setIsLoadingExplanation] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0 });
+  const [isDraggingTooltip, setIsDraggingTooltip] = useState(false);
+  const tooltipDragOffsetRef = useRef({ x: 0, y: 0 });
 
   const handleGenerateExplanation = async () => {
     setIsLoadingExplanation(true);
@@ -26,6 +29,100 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
       setIsLoadingExplanation(false);
     }
   };
+
+  const handleSentenceClick = (e: React.MouseEvent, index: number) => {
+    const englishSentences = story.englishTranslation.split('\n').filter(s => s.trim());
+    const translation = englishSentences[index] || 'Translation not available';
+    
+    const x = e.clientX + 15;
+    const y = e.clientY + 15;
+    
+    setTooltip({ visible: true, text: translation, x, y });
+  };
+
+  const handleTooltipMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('tooltip-close') || target.closest('.tooltip-close')) {
+      return;
+    }
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setIsDraggingTooltip(true);
+    tooltipDragOffsetRef.current = {
+      x: e.clientX - tooltip.x,
+      y: e.clientY - tooltip.y
+    };
+  };
+
+  const handleTooltipTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('tooltip-close') || target.closest('.tooltip-close')) {
+      return;
+    }
+    
+    e.stopPropagation();
+    
+    const touch = e.touches[0];
+    setIsDraggingTooltip(true);
+    tooltipDragOffsetRef.current = {
+      x: touch.clientX - tooltip.x,
+      y: touch.clientY - tooltip.y
+    };
+  };
+
+  const handleTooltipClose = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setTooltip({ visible: false, text: '', x: 0, y: 0 });
+    setIsDraggingTooltip(false);
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDraggingTooltip) {
+        setTooltip(current => ({
+          ...current,
+          x: e.clientX - tooltipDragOffsetRef.current.x,
+          y: e.clientY - tooltipDragOffsetRef.current.y
+        }));
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (isDraggingTooltip && e.touches.length > 0) {
+        const touch = e.touches[0];
+        setTooltip(current => ({
+          ...current,
+          x: touch.clientX - tooltipDragOffsetRef.current.x,
+          y: touch.clientY - tooltipDragOffsetRef.current.y
+        }));
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingTooltip(false);
+    };
+
+    const handleTouchEnd = () => {
+      setIsDraggingTooltip(false);
+    };
+
+    if (isDraggingTooltip) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove);
+      document.addEventListener('touchend', handleTouchEnd);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isDraggingTooltip]);
 
   const getGrammarIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -95,27 +192,24 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
           {!showExplanation ? (
             <div className="story-text-container">
               <div className="story-section">
-                <h3>🇩🇰 Danish</h3>
+                <h3>🇩🇰 Danish Story</h3>
                 <div className="story-text danish-text">
                   {danishSentences.map((sentence, idx) => (
-                    <p key={idx}>{sentence}</p>
-                  ))}
-                </div>
-              </div>
-
-              <div className="story-divider"></div>
-
-              <div className="story-section">
-                <h3>🇬🇧 English Translation</h3>
-                <div className="story-text english-text">
-                  {englishSentences.map((sentence, idx) => (
-                    <p key={idx}>{sentence}</p>
+                    <p 
+                      key={idx} 
+                      className="clickable-sentence"
+                      onClick={(e) => handleSentenceClick(e, idx)}
+                      title="Click to see English translation"
+                    >
+                      {sentence}
+                    </p>
                   ))}
                 </div>
               </div>
 
               <div className="story-hint">
-                <p>💡 Click the light bulb icon above to get detailed grammar explanations!</p>
+                <p>💡 Click any Danish sentence to see its English translation in a draggable popup!</p>
+                <p>📚 Click the light bulb icon above to get detailed grammar explanations!</p>
               </div>
             </div>
           ) : (
@@ -166,6 +260,28 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
             </div>
           )}
         </div>
+        
+        {tooltip.visible && (
+          <div 
+            className="tooltip draggable-tooltip" 
+            style={{ 
+              top: `${tooltip.y}px`, 
+              left: `${tooltip.x}px`
+            }}
+            onMouseDown={handleTooltipMouseDown}
+            onTouchStart={handleTooltipTouchStart}
+          >
+            <div className="tooltip-content">{tooltip.text}</div>
+            <button 
+              className="tooltip-close"
+              onClick={handleTooltipClose}
+              onTouchEnd={handleTooltipClose}
+              aria-label="Close translation"
+            >
+              ×
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

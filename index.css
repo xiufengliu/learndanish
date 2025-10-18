@@ -2269,9 +2269,22 @@ button:disabled {
 }
 
 .story-hint p {
-  margin: 0;
+  margin: 0.5rem 0;
   color: var(--text-secondary);
   font-size: 0.95rem;
+}
+
+.clickable-sentence {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0.5rem;
+  margin: 0.5rem 0;
+  border-radius: 6px;
+}
+
+.clickable-sentence:hover {
+  background-color: rgba(102, 126, 234, 0.1);
+  transform: translateX(4px);
 }
 
 .story-explanation-container {
