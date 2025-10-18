@@ -99,6 +99,8 @@ const DanishTutorApp = () => {
   const currentOutputTranscription = useRef('');
 
   const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0 });
+  const [isDraggingTooltip, setIsDraggingTooltip] = useState(false);
+  const [tooltipDragOffset, setTooltipDragOffset] = useState({ x: 0, y: 0 });
 
   // Keyboard shortcuts
   const shortcuts: ShortcutHandler[] = [
@@ -340,7 +342,45 @@ const DanishTutorApp = () => {
     }
   };
 
-  const handleMouseLeaveTooltip = () => setTooltip({ ...tooltip, visible: false });
+  const handleMouseLeaveTooltip = () => {
+    if (!isDraggingTooltip) {
+      setTooltip({ ...tooltip, visible: false });
+    }
+  };
+
+  const handleTooltipMouseDown = (e: React.MouseEvent) => {
+    setIsDraggingTooltip(true);
+    setTooltipDragOffset({
+      x: e.clientX - tooltip.x,
+      y: e.clientY - tooltip.y
+    });
+    e.preventDefault();
+  };
+
+  const handleTooltipMouseMove = (e: MouseEvent) => {
+    if (isDraggingTooltip) {
+      setTooltip(current => ({
+        ...current,
+        x: e.clientX - tooltipDragOffset.x,
+        y: e.clientY - tooltipDragOffset.y
+      }));
+    }
+  };
+
+  const handleTooltipMouseUp = () => {
+    setIsDraggingTooltip(false);
+  };
+
+  useEffect(() => {
+    if (isDraggingTooltip) {
+      document.addEventListener('mousemove', handleTooltipMouseMove);
+      document.addEventListener('mouseup', handleTooltipMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleTooltipMouseMove);
+        document.removeEventListener('mouseup', handleTooltipMouseUp);
+      };
+    }
+  }, [isDraggingTooltip, tooltipDragOffset]);
 
   const handleMaximizeToggle = () => setIsMaximized(!isMaximized);
 
@@ -442,8 +482,26 @@ const DanishTutorApp = () => {
         </button>
       </div>
       {tooltip.visible && (
-        <div className="tooltip" style={{ top: `${tooltip.y}px`, left: `${tooltip.x}px` }}>
-          {tooltip.text}
+        <div 
+          className="tooltip draggable-tooltip" 
+          style={{ 
+            top: `${tooltip.y}px`, 
+            left: `${tooltip.x}px`,
+            cursor: isDraggingTooltip ? 'grabbing' : 'grab'
+          }}
+          onMouseDown={handleTooltipMouseDown}
+        >
+          <div className="tooltip-header">Translation</div>
+          <div className="tooltip-content">{tooltip.text}</div>
+          <button 
+            className="tooltip-close" 
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              setTooltip({ ...tooltip, visible: false }); 
+            }}
+          >
+            ×
+          </button>
         </div>
       )}
       {showSettings && (

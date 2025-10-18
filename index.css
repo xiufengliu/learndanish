@@ -296,16 +296,63 @@ button:disabled {
   position: fixed;
   background-color: #333;
   color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 1rem; /* Increased tooltip font size */
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 1rem;
   z-index: 1000;
   max-width: 300px;
-  pointer-events: none; /* So the tooltip itself doesn't interfere with mouse events */
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  opacity: 0.95;
-  white-space: pre-wrap; /* To respect newlines if any */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  opacity: 0.98;
+  white-space: pre-wrap;
   transition: max-width 0.3s ease;
+  user-select: none;
+}
+
+.draggable-tooltip {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+
+.tooltip-header {
+  font-size: 0.85rem;
+  font-weight: 600;
+  opacity: 0.8;
+  padding: 4px 8px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: grab;
+}
+
+.tooltip-header:active {
+  cursor: grabbing;
+}
+
+.tooltip-content {
+  padding: 8px;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.tooltip-close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.tooltip-close:hover {
+  opacity: 1;
 }
 
 .container.maximized .tooltip {
