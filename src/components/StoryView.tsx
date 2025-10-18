@@ -15,23 +15,27 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
   const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0 });
   const [isDraggingTooltip, setIsDraggingTooltip] = useState(false);
   const [selectedText, setSelectedText] = useState<string>('');
+  const [lastClickedSentence, setLastClickedSentence] = useState<string>('');
   const tooltipDragOffsetRef = useRef({ x: 0, y: 0 });
 
   const handleGenerateExplanation = async () => {
-    // Get selected text
+    // Try to get manually selected text first
     const selection = window.getSelection();
-    const selected = selection?.toString().trim() || '';
+    const manuallySelected = selection?.toString().trim() || '';
     
-    if (!selected) {
-      alert('Please select some Danish text first to get grammar explanation.');
+    // Use manually selected text if available, otherwise use last clicked sentence
+    const textToExplain = manuallySelected || lastClickedSentence;
+    
+    if (!textToExplain) {
+      alert('Please click on a Danish sentence first or select some text to get grammar explanation.');
       return;
     }
     
-    setSelectedText(selected);
+    setSelectedText(textToExplain);
     setIsLoadingExplanation(true);
     setError(null);
     try {
-      const explanationData = await generateStoryExplanation(selected);
+      const explanationData = await generateStoryExplanation(textToExplain);
       setExplanation(explanationData);
       setShowExplanation(true);
     } catch (err) {
@@ -42,8 +46,14 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
   };
 
   const handleSentenceClick = (e: React.MouseEvent, index: number) => {
+    const danishSentences = story.danishText.split('\n').filter(s => s.trim());
     const englishSentences = story.englishTranslation.split('\n').filter(s => s.trim());
+    
+    const clickedSentence = danishSentences[index] || '';
     const translation = englishSentences[index] || 'Translation not available';
+    
+    // Store the clicked sentence for later explanation
+    setLastClickedSentence(clickedSentence);
     
     const x = e.clientX + 15;
     const y = e.clientY + 15;
@@ -220,7 +230,7 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
 
               <div className="story-hint">
                 <p>💡 Click any Danish sentence to see its English translation in a draggable popup!</p>
-                <p>📚 Select any Danish text (word, phrase, or sentence) and click the light bulb icon to get detailed grammar explanations!</p>
+                <p>📚 After clicking a sentence, click the light bulb icon to get grammar explanations for that sentence. You can also manually select any text for explanation.</p>
               </div>
             </div>
           ) : (
