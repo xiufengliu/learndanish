@@ -205,7 +205,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = ({ vocabulary, onClose, onUp
 
         <div className="flashcard-footer">
           <button className="skip-button" onClick={handleSkip}>
-            Skip
+            Next
           </button>
         </div>
       </div>
