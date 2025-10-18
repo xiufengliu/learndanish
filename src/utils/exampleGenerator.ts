@@ -41,6 +41,7 @@ Return a JSON object:
     );
 
     const text = response.text.trim();
+    console.log('Example sentences response:', text);
     
     // Extract JSON from response
     let jsonText = text;
@@ -50,11 +51,20 @@ Return a JSON object:
       jsonText = text.split('```')[1].split('```')[0].trim();
     }
 
+    console.log('Parsed JSON text:', jsonText);
     const parsed = JSON.parse(jsonText);
+    console.log('Parsed sentences:', parsed);
     const sentences = parsed.sentences || [];
     
-    // Format as "Danish sentence - English translation"
-    return sentences.map((s: any) => `${s.danish} - ${s.english}`);
+    // Format as "Danish sentence - translation"
+    const translationKey = audienceLanguage === 'chinese' ? 'chinese' : 'english';
+    console.log('Using translation key:', translationKey);
+    const result = sentences.map((s: any) => {
+      console.log('Sentence object:', s);
+      return `${s.danish} - ${s[translationKey]}`;
+    });
+    console.log('Final result:', result);
+    return result;
   } catch (error) {
     console.error('Failed to generate example sentences:', error);
     return [];
@@ -101,6 +111,7 @@ If there is NO significant cultural context (just a regular everyday word), retu
     );
 
     const text = response.text.trim();
+    console.log('Cultural note response:', text);
     
     // Extract JSON from response
     let jsonText = text;
@@ -110,7 +121,9 @@ If there is NO significant cultural context (just a regular everyday word), retu
       jsonText = text.split('```')[1].split('```')[0].trim();
     }
 
+    console.log('Parsed JSON text:', jsonText);
     const parsed = JSON.parse(jsonText);
+    console.log('Parsed cultural note:', parsed);
     
     if (parsed.hasCulturalNote && parsed.note) {
       return parsed.note;
