@@ -2280,6 +2280,18 @@ button:disabled {
   padding: 0.5rem;
   margin: 0.5rem 0;
   border-radius: 6px;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+.clickable-sentence::selection {
+  background-color: rgba(102, 126, 234, 0.3);
+}
+
+.clickable-sentence::-moz-selection {
+  background-color: rgba(102, 126, 234, 0.3);
 }
 
 .clickable-sentence:hover {
@@ -2301,9 +2313,16 @@ button:disabled {
 }
 
 .explanation-header h3 {
-  margin: 0;
+  margin: 0 0 0.5rem 0;
   font-size: 1.3rem;
   color: var(--text-color);
+}
+
+.explanation-selected-text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  font-style: italic;
 }
 
 .back-to-story-button {

@@ -14,13 +14,24 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
   const [error, setError] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0 });
   const [isDraggingTooltip, setIsDraggingTooltip] = useState(false);
+  const [selectedText, setSelectedText] = useState<string>('');
   const tooltipDragOffsetRef = useRef({ x: 0, y: 0 });
 
   const handleGenerateExplanation = async () => {
+    // Get selected text
+    const selection = window.getSelection();
+    const selected = selection?.toString().trim() || '';
+    
+    if (!selected) {
+      alert('Please select some Danish text first to get grammar explanation.');
+      return;
+    }
+    
+    setSelectedText(selected);
     setIsLoadingExplanation(true);
     setError(null);
     try {
-      const explanationData = await generateStoryExplanation(story.danishText);
+      const explanationData = await generateStoryExplanation(selected);
       setExplanation(explanationData);
       setShowExplanation(true);
     } catch (err) {
@@ -209,13 +220,16 @@ const StoryView: React.FC<StoryViewProps> = ({ story, onClose }) => {
 
               <div className="story-hint">
                 <p>💡 Click any Danish sentence to see its English translation in a draggable popup!</p>
-                <p>📚 Click the light bulb icon above to get detailed grammar explanations!</p>
+                <p>📚 Select any Danish text (word, phrase, or sentence) and click the light bulb icon to get detailed grammar explanations!</p>
               </div>
             </div>
           ) : (
             <div className="story-explanation-container">
               <div className="explanation-header">
-                <h3>📚 Grammar Explanation</h3>
+                <div>
+                  <h3>📚 Grammar Explanation</h3>
+                  <p className="explanation-selected-text">Selected: "{selectedText}"</p>
+                </div>
                 <button 
                   className="back-to-story-button"
                   onClick={() => setShowExplanation(false)}
