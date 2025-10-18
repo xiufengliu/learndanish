@@ -1,9 +1,7 @@
 // Grammar analysis using AI
 
-import { GoogleGenAI } from "@google/genai";
 import { GrammarAnalysis, GrammarCorrection } from '../types/grammar';
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+import { withGenAIClient } from './genAIClient';
 
 export async function analyzeGrammar(userText: string): Promise<GrammarAnalysis> {
   try {
@@ -32,10 +30,12 @@ Danish text to analyze: "${userText}"
 Provide explanations in English so the learner understands the mistake clearly.
 `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt
-    });
+    const response = await withGenAIClient(client =>
+      client.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt
+      })
+    );
 
     const text = response.text.trim();
     

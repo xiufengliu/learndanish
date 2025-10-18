@@ -1,8 +1,6 @@
 // Generate example sentences for vocabulary words
 
-import { GoogleGenAI } from "@google/genai";
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+import { withGenAIClient } from './genAIClient';
 
 export async function generateExampleSentences(
   danishWord: string,
@@ -32,10 +30,12 @@ Return a JSON object:
 }
 `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt
-    });
+    const response = await withGenAIClient(client =>
+      client.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt
+      })
+    );
 
     const text = response.text.trim();
     
@@ -85,10 +85,12 @@ If there is NO significant cultural context (just a regular everyday word), retu
 }
 `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt
-    });
+    const response = await withGenAIClient(client =>
+      client.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt
+      })
+    );
 
     const text = response.text.trim();
     
@@ -167,10 +169,12 @@ FOR OTHER WORD TYPES (adverbs, prepositions, etc.), return:
 Only provide actual forms that exist. Be accurate with Danish grammar rules.
 `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt
-    });
+    const response = await withGenAIClient(client =>
+      client.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt
+      })
+    );
 
     const text = response.text.trim();
     

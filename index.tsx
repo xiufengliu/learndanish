@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { GoogleGenAI, LiveServerMessage, Modality, Blob } from "@google/genai";
+import { LiveServerMessage, Modality, Blob } from "@google/genai";
 import ErrorBoundary from './src/components/ErrorBoundary';
 import SettingsPanel from './src/components/SettingsPanel';
 import VocabularyList from './src/components/VocabularyList';
 import FlashcardView from './src/components/FlashcardView';
 import GrammarPanel from './src/components/GrammarPanel';
 import { retryWithBackoff } from './src/utils/retryLogic';
+import { withGenAIClient } from './src/utils/genAIClient';
 import { useTheme } from './src/hooks/useTheme';
 import { useSettings } from './src/hooks/useSettings';
 import { useVocabularyTracker } from './src/hooks/useVocabularyTracker';
@@ -64,7 +65,6 @@ type ChatMessage = {
   translation?: string;
 };
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 const CHAT_HISTORY_KEY = 'danishTutorHistory';
 
 const DanishTutorApp = () => {
@@ -176,100 +176,106 @@ const DanishTutorApp = () => {
     let nextStartTime = 0;
     const sources = new Set<AudioBufferSourceNode>();
     
-    sessionPromiseRef.current = ai.live.connect({
-      model: 'gemini-2.5-flash-native-audio-preview-09-2025',
-      callbacks: {
-        onopen: async () => {
-          console.log('Session opened.');
-          setError(null);
-          // Start with a greeting only if chat history is completely empty.
-          if (chatHistory.length === 0) {
-            setChatHistory([{ role: 'model', text: 'Hej! Hvordan går det?', translation: 'Hello! How are you?'}]);
-          }
-        },
-        onmessage: async (message: LiveServerMessage) => {
-          if (message.serverContent?.outputTranscription) {
-            currentOutputTranscription.current += message.serverContent.outputTranscription.text;
-          } else if (message.serverContent?.inputTranscription) {
-            currentInputTranscription.current += message.serverContent.inputTranscription.text;
-          }
-  
-          if (message.serverContent?.turnComplete) {
-            const fullInput = currentInputTranscription.current.trim();
-            const fullOutput = currentOutputTranscription.current.trim();
-  
-            if(fullInput) {
-              setChatHistory(prev => [...prev, {role: 'user', text: fullInput}]);
-              
-              // Analyze grammar if corrections are enabled
-              if (settings.grammarCorrections && fullInput.length > 5) {
-                analyzeGrammar(fullInput).then(analysis => {
-                  if (analysis.hasErrors && analysis.corrections.length > 0) {
-                    addCorrections(analysis.corrections);
-                  }
-                }).catch(err => 
-                  console.error('Failed to analyze grammar:', err)
-                );
-              }
+    sessionPromiseRef.current = withGenAIClient(async (client) =>
+      client.live.connect({
+        model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+        callbacks: {
+          onopen: async () => {
+            console.log('Session opened.');
+            setError(null);
+            // Start with a greeting only if chat history is completely empty.
+            if (chatHistory.length === 0) {
+              setChatHistory([{ role: 'model', text: 'Hej! Hvordan går det?', translation: 'Hello! How are you?'}]);
             }
-            if(fullOutput) {
-              setChatHistory(prev => [...prev, {role: 'model', text: fullOutput}]);
-              
-              // Extract vocabulary from model response if enabled
-              if (settings.vocabularyTracking) {
-                extractAndAddVocabulary(fullOutput, fullInput).catch(err => 
-                  console.error('Failed to extract vocabulary:', err)
-                );
-              }
+          },
+          onmessage: async (message: LiveServerMessage) => {
+            if (message.serverContent?.outputTranscription) {
+              currentOutputTranscription.current += message.serverContent.outputTranscription.text;
+            } else if (message.serverContent?.inputTranscription) {
+              currentInputTranscription.current += message.serverContent.inputTranscription.text;
             }
-  
-            currentInputTranscription.current = '';
-            currentOutputTranscription.current = '';
-          }
-  
-          const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
-          if (base64Audio) {
-            nextStartTime = Math.max(nextStartTime, outputAudioContext.currentTime);
-            const audioBuffer = await decodeAudioData(decode(base64Audio), outputAudioContext, 24000, 1);
-            const source = outputAudioContext.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(outputNode);
-            source.addEventListener('ended', () => sources.delete(source));
-            source.start(nextStartTime);
-            nextStartTime += audioBuffer.duration;
-            sources.add(source);
-          }
-  
-          if (message.serverContent?.interrupted) {
-            for (const source of sources.values()) {
-              source.stop();
-              sources.delete(source);
-            }
-            nextStartTime = 0;
-          }
-        },
-        onerror: (e: ErrorEvent) => {
-            console.error('Session error:', e);
-            setError('An error occurred with the connection. Please try refreshing.');
-            stopRecording();
-        },
-        onclose: () => {
-            console.log('Session closed.');
-        },
-      },
-      config: {
-              responseModalities: [Modality.AUDIO],
-              speechConfig: {
-                voiceConfig: {
-                  prebuiltVoiceConfig: {
-                    voiceName: 'Kore' // Default Danish voice
-                  }
+    
+            if (message.serverContent?.turnComplete) {
+              const fullInput = currentInputTranscription.current.trim();
+              const fullOutput = currentOutputTranscription.current.trim();
+    
+              if(fullInput) {
+                setChatHistory(prev => [...prev, {role: 'user', text: fullInput}]);
+                
+                // Analyze grammar if corrections are enabled
+                if (settings.grammarCorrections && fullInput.length > 5) {
+                  analyzeGrammar(fullInput).then(analysis => {
+                    if (analysis.hasErrors && analysis.corrections.length > 0) {
+                      addCorrections(analysis.corrections);
+                    }
+                  }).catch(err => 
+                    console.error('Failed to analyze grammar:', err)
+                  );
                 }
+              }
+              if(fullOutput) {
+                setChatHistory(prev => [...prev, {role: 'model', text: fullOutput}]);
+                
+                // Extract vocabulary from model response if enabled
+                if (settings.vocabularyTracking) {
+                  extractAndAddVocabulary(fullOutput, fullInput).catch(err => 
+                    console.error('Failed to extract vocabulary:', err)
+                  );
+                }
+              }
+    
+              currentInputTranscription.current = '';
+              currentOutputTranscription.current = '';
+            }
+    
+            const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+            if (base64Audio) {
+              nextStartTime = Math.max(nextStartTime, outputAudioContext.currentTime);
+              const audioBuffer = await decodeAudioData(decode(base64Audio), outputAudioContext, 24000, 1);
+              const source = outputAudioContext.createBufferSource();
+              source.buffer = audioBuffer;
+              source.connect(outputNode);
+              source.addEventListener('ended', () => sources.delete(source));
+              source.start(nextStartTime);
+              nextStartTime += audioBuffer.duration;
+              sources.add(source);
+            }
+    
+            if (message.serverContent?.interrupted) {
+              for (const source of sources.values()) {
+                source.stop();
+                sources.delete(source);
+              }
+              nextStartTime = 0;
+            }
+          },
+          onerror: (e: ErrorEvent) => {
+              console.error('Session error:', e);
+              setError('An error occurred with the connection. Please try refreshing.');
+              stopRecording();
+          },
+          onclose: () => {
+              console.log('Session closed.');
+          },
+        },
+        config: {
+                responseModalities: [Modality.AUDIO],
+                speechConfig: {
+                  voiceConfig: {
+                    prebuiltVoiceConfig: {
+                      voiceName: 'Kore' // Default Danish voice
+                    }
+                  }
+                },
+                systemInstruction: generateSystemInstruction(settings),
+                inputAudioTranscription: {},
+                outputAudioTranscription: {},
               },
-              systemInstruction: generateSystemInstruction(settings),
-              inputAudioTranscription: {},
-              outputAudioTranscription: {},
-            },
+      })
+    ).catch(err => {
+      console.error('Failed to start Gemini live session:', err);
+      setError('Unable to connect to the tutor right now. Please try again shortly.');
+      throw err;
     });
   };
 
@@ -347,10 +353,12 @@ const DanishTutorApp = () => {
       setTooltip({ visible: true, text: 'Translating...', x, y });
       try {
         const translation = await retryWithBackoff(async () => {
-          const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: `Translate the following Danish text to English. Provide only the translation, without any additional formatting or commentary. Danish: "${message.text}"`
-          });
+          const response = await withGenAIClient(client =>
+            client.models.generateContent({
+              model: 'gemini-2.5-flash',
+              contents: `Translate the following Danish text to English. Provide only the translation, without any additional formatting or commentary. Danish: "${message.text}"`
+            })
+          );
           return response.text;
         });
         

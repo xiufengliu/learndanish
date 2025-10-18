@@ -1,9 +1,7 @@
 // Vocabulary extraction from conversations using AI
 
-import { GoogleGenAI } from "@google/genai";
 import { VocabularyWord } from '../types/vocabulary';
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+import { withGenAIClient } from './genAIClient';
 
 interface ExtractedWord {
   danishWord: string;
@@ -37,10 +35,12 @@ Message: "${message}"
 Context: "${context}"
 `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt
-    });
+    const response = await withGenAIClient(client =>
+      client.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt
+      })
+    );
 
     const text = response.text.trim();
     
