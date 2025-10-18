@@ -10,6 +10,19 @@ interface FlashcardProps {
 const Flashcard: React.FC<FlashcardProps> = ({ word, onReview, showContext = true }) => {
   const [isFlipped, setIsFlipped] = useState(false);
 
+  // Ensure voices are loaded
+  React.useEffect(() => {
+    if ('speechSynthesis' in window) {
+      // Load voices
+      window.speechSynthesis.getVoices();
+      
+      // Some browsers need this event to load voices
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
+  }, []);
+
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
   };
@@ -26,10 +39,29 @@ const Flashcard: React.FC<FlashcardProps> = ({ word, onReview, showContext = tru
       // Cancel any ongoing speech
       window.speechSynthesis.cancel();
       
+      // Get available voices
+      const voices = window.speechSynthesis.getVoices();
+      
+      // Find the best Danish voice (prioritize native Danish voices)
+      const danishVoice = voices.find(voice => 
+        voice.lang.startsWith('da') && voice.localService
+      ) || voices.find(voice => 
+        voice.lang.startsWith('da')
+      ) || voices.find(voice =>
+        voice.lang.includes('DK')
+      );
+      
       // Create utterance for Danish word
       const utterance = new SpeechSynthesisUtterance(word.danishWord);
       utterance.lang = 'da-DK'; // Danish language
-      utterance.rate = 0.9; // Slightly slower for learning
+      utterance.rate = 0.85; // Slightly slower for learning
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      
+      if (danishVoice) {
+        utterance.voice = danishVoice;
+        console.log('Using Danish voice:', danishVoice.name);
+      }
       
       // Speak the word
       window.speechSynthesis.speak(utterance);
@@ -40,7 +72,14 @@ const Flashcard: React.FC<FlashcardProps> = ({ word, onReview, showContext = tru
           setTimeout(() => {
             const contextUtterance = new SpeechSynthesisUtterance(word.context);
             contextUtterance.lang = 'da-DK';
-            contextUtterance.rate = 0.9;
+            contextUtterance.rate = 0.85;
+            contextUtterance.pitch = 1.0;
+            contextUtterance.volume = 1.0;
+            
+            if (danishVoice) {
+              contextUtterance.voice = danishVoice;
+            }
+            
             window.speechSynthesis.speak(contextUtterance);
           }, 300);
         };
