@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { VocabularyWord } from '../types/vocabulary';
 import { generateExampleSentences, generateCulturalNote, generateGrammaticalForms } from '../utils/exampleGenerator';
-import { speakTextWithDeepgram } from '../utils/deepgramTTS';
 
 interface VocabularyListProps {
   vocabulary: VocabularyWord[];
@@ -12,11 +11,16 @@ interface VocabularyListProps {
   onClearAll?: () => void;
 }
 
-const speakText = (text: string, lang: string = 'da') => {
-  // Use Deepgram TTS for better Danish pronunciation
-  speakTextWithDeepgram(text, lang).catch(err => {
-    console.error('Failed to speak with Deepgram:', err);
-  });
+const speakText = (text: string, lang: string = 'da-DK') => {
+  // Use browser's built-in TTS which has good Danish support
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
+    window.speechSynthesis.speak(utterance);
+  }
 };
 
 type SortBy = 'recent' | 'alphabetical' | 'proficiency';

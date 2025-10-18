@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { VocabularyWord } from '../types/vocabulary';
-import { speakTextWithDeepgram } from '../utils/deepgramTTS';
 
 interface FlashcardProps {
   word: VocabularyWord;
@@ -31,10 +30,15 @@ const Flashcard: React.FC<FlashcardProps> = ({ word, onReview, showContext = tru
   const handleSpeak = (e: React.MouseEvent) => {
     e.stopPropagation();
     
-    // Use Deepgram TTS for better Danish pronunciation
-    speakTextWithDeepgram(word.danishWord, 'da').catch(err => {
-      console.error('Failed to speak Danish word:', err);
-    });
+    // Use browser's built-in TTS for Danish
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(word.danishWord);
+      utterance.lang = 'da-DK';
+      utterance.rate = 0.75; // Slower for learning
+      utterance.pitch = 1.0;
+      window.speechSynthesis.speak(utterance);
+    }
   };
 
   return (
