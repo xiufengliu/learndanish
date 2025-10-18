@@ -697,6 +697,13 @@ button:disabled {
   border: none;
 }
 
+.setting-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
 .slider-labels {
   display: flex;
   justify-content: space-between;
@@ -1966,4 +1973,3 @@ button:disabled {
     min-width: 100%;
   }
 }
-

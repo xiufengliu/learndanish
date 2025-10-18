@@ -16,6 +16,7 @@ import { useKeyboardShortcuts, ShortcutHandler } from './src/hooks/useKeyboardSh
 import { useGrammarTracking } from './src/hooks/useGrammarTracking';
 import { generateSystemInstruction } from './src/utils/systemPrompt';
 import { analyzeGrammar } from './src/utils/grammarAnalyzer';
+import { useWakeLock } from './src/hooks/useWakeLock';
 
 // --- Audio Helper Functions (as per guidelines) ---
 
@@ -73,6 +74,7 @@ const DanishTutorApp = () => {
   const { vocabulary, extractAndAddVocabulary, deleteWord, updateWord } = useVocabularyTracker();
   const { getDueWords } = useSpacedRepetition();
   const { grammarHistory, addCorrections } = useGrammarTracking();
+  const { isSupported: wakeLockSupported, requestWakeLock, releaseWakeLock } = useWakeLock();
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>(() => {
     try {
       const savedHistory = localStorage.getItem(CHAT_HISTORY_KEY);
@@ -166,6 +168,25 @@ const DanishTutorApp = () => {
     // This effect runs whenever chatHistory changes, and saves it.
     localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatHistory));
   }, [chatHistory]);
+
+  useEffect(() => {
+    if (!wakeLockSupported) {
+      return;
+    }
+
+    const shouldHoldWakeLock = settings.preventScreenLock || isRecording;
+    if (shouldHoldWakeLock) {
+      void requestWakeLock();
+    } else {
+      void releaseWakeLock();
+    }
+  }, [
+    settings.preventScreenLock,
+    isRecording,
+    wakeLockSupported,
+    requestWakeLock,
+    releaseWakeLock
+  ]);
 
   const startSession = () => {
     // Fix: Cast window to `any` to access vendor-prefixed `webkitAudioContext` for older browsers.
@@ -598,6 +619,7 @@ const DanishTutorApp = () => {
           settings={settings}
           onUpdateSettings={updateSettings}
           onClose={() => setShowSettings(false)}
+          wakeLockSupported={wakeLockSupported}
         />
       )}
       {showVocabulary && (

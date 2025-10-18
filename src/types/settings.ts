@@ -9,6 +9,7 @@ export interface AppSettings {
   vocabularyTracking: boolean;
   autoTranslate: boolean;
   keyboardShortcuts: boolean;
+  preventScreenLock: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -19,5 +20,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   grammarCorrections: true,
   vocabularyTracking: true,
   autoTranslate: false,
-  keyboardShortcuts: true
+  keyboardShortcuts: true,
+  preventScreenLock: true
 };

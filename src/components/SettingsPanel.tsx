@@ -5,9 +5,10 @@ interface SettingsPanelProps {
   settings: AppSettings;
   onUpdateSettings: (updates: Partial<AppSettings>) => void;
   onClose: () => void;
+  wakeLockSupported?: boolean;
 }
 
-const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdateSettings, onClose }) => {
+const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdateSettings, onClose, wakeLockSupported = true }) => {
   return (
     <div className="settings-overlay" onClick={onClose}>
       <div className="settings-panel" onClick={(e) => e.stopPropagation()}>
@@ -104,6 +105,24 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdateSetting
               />
               <span>Enable keyboard shortcuts</span>
             </label>
+          </div>
+
+          <div className="setting-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={settings.preventScreenLock}
+                onChange={(e) => onUpdateSettings({ preventScreenLock: e.target.checked })}
+                disabled={!wakeLockSupported}
+              />
+              <span>
+                Keep screen awake during sessions
+                {!wakeLockSupported ? ' (Not supported on this device)' : ''}
+              </span>
+            </label>
+            <p className="setting-hint">
+              Prevents the phone from locking so conversations continue uninterrupted.
+            </p>
           </div>
         </div>
       </div>
