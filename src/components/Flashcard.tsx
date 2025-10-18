@@ -3,7 +3,7 @@ import { VocabularyWord } from '../types/vocabulary';
 
 interface FlashcardProps {
   word: VocabularyWord;
-  onReview: (quality: 'again' | 'hard' | 'good' | 'easy') => void;
+  onReview: (result: 'forgot' | 'remembered' | 'mastered') => void;
   showContext?: boolean;
 }
 
@@ -27,8 +27,8 @@ const Flashcard: React.FC<FlashcardProps> = ({ word, onReview, showContext = tru
     setIsFlipped(!isFlipped);
   };
 
-  const handleReview = (quality: 'again' | 'hard' | 'good' | 'easy') => {
-    onReview(quality);
+  const handleReview = (result: 'forgot' | 'remembered' | 'mastered') => {
+    onReview(result);
     setIsFlipped(false);
   };
 
@@ -111,28 +111,31 @@ const Flashcard: React.FC<FlashcardProps> = ({ word, onReview, showContext = tru
       {isFlipped && (
         <div className="flashcard-buttons">
           <button 
-            className="review-button again"
-            onClick={(e) => { e.stopPropagation(); handleReview('again'); }}
+            className="review-button forgot"
+            onClick={(e) => { e.stopPropagation(); handleReview('forgot'); }}
+            title="I forgot this word - need to review again"
           >
-            Again
+            <span className="button-icon">❌</span>
+            <span className="button-text">Forgot</span>
+            <span className="button-subtitle">Review again</span>
           </button>
           <button 
-            className="review-button hard"
-            onClick={(e) => { e.stopPropagation(); handleReview('hard'); }}
+            className="review-button remembered"
+            onClick={(e) => { e.stopPropagation(); handleReview('remembered'); }}
+            title="I remembered this word"
           >
-            Hard
+            <span className="button-icon">✓</span>
+            <span className="button-text">Remembered</span>
+            <span className="button-subtitle">Still learning</span>
           </button>
           <button 
-            className="review-button good"
-            onClick={(e) => { e.stopPropagation(); handleReview('good'); }}
+            className="review-button mastered"
+            onClick={(e) => { e.stopPropagation(); handleReview('mastered'); }}
+            title="I've mastered this word - remove from review"
           >
-            Good
-          </button>
-          <button 
-            className="review-button easy"
-            onClick={(e) => { e.stopPropagation(); handleReview('easy'); }}
-          >
-            Easy
+            <span className="button-icon">⭐</span>
+            <span className="button-text">Mastered</span>
+            <span className="button-subtitle">Remove from deck</span>
           </button>
         </div>
       )}

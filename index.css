@@ -1231,23 +1231,78 @@ button:disabled {
 
 .flashcard-buttons {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
   width: 100%;
   flex-shrink: 0;
 }
 
 .review-button {
-  padding: 0.75rem 1rem;
+  padding: 1rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 0.95rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
+.review-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.review-button:active {
+  transform: translateY(0);
+}
+
+.button-icon {
+  font-size: 1.5rem;
+  display: block;
+}
+
+.button-text {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.button-subtitle {
+  font-size: 0.75rem;
+  opacity: 0.9;
+  font-weight: 400;
+}
+
+.review-button.forgot {
+  background: linear-gradient(135deg, #d93025, #c5221f);
+}
+
+.review-button.forgot:hover {
+  background: linear-gradient(135deg, #c5221f, #b31d18);
+}
+
+.review-button.remembered {
+  background: linear-gradient(135deg, #4285f4, #357ae8);
+}
+
+.review-button.remembered:hover {
+  background: linear-gradient(135deg, #357ae8, #2a65d4);
+}
+
+.review-button.mastered {
+  background: linear-gradient(135deg, #1e8e3e, #188537);
+}
+
+.review-button.mastered:hover {
+  background: linear-gradient(135deg, #188537, #137230);
+}
+
+/* Keep old button classes for backward compatibility */
 .review-button.again {
   background-color: var(--error-color);
 }
@@ -1361,19 +1416,64 @@ button:disabled {
 }
 
 .summary-breakdown {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 0.75rem;
   margin: 2rem 0;
 }
 
 .breakdown-item {
-  padding: 0.75rem;
-  border-radius: 8px;
+  padding: 1rem;
+  border-radius: 12px;
   font-weight: 500;
   color: white;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
+.breakdown-icon {
+  font-size: 1.5rem;
+}
+
+.breakdown-text {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.breakdown-item.forgot {
+  background: linear-gradient(135deg, #d93025, #c5221f);
+}
+
+.breakdown-item.remembered {
+  background: linear-gradient(135deg, #4285f4, #357ae8);
+}
+
+.breakdown-item.mastered {
+  background: linear-gradient(135deg, #1e8e3e, #188537);
+}
+
+.mastery-message {
+  margin: 1.5rem 0;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(30, 142, 62, 0.1), rgba(129, 201, 149, 0.1));
+  border-left: 4px solid var(--success-color);
+  border-radius: 8px;
+  text-align: left;
+}
+
+.mastery-message p {
+  margin: 0.5rem 0;
+  line-height: 1.6;
+}
+
+.mastery-note {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* Keep old classes for backward compatibility */
 .breakdown-item.again {
   background-color: var(--error-color);
 }
@@ -1420,13 +1520,25 @@ button:disabled {
   }
 
   .flashcard-buttons {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
     gap: 0.5rem;
   }
 
   .review-button {
-    padding: 0.6rem 0.75rem;
-    font-size: 0.85rem;
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .button-icon {
+    font-size: 1.3rem;
+  }
+
+  .button-text {
+    font-size: 0.95rem;
+  }
+
+  .button-subtitle {
+    font-size: 0.7rem;
   }
 
   .summary-stats {

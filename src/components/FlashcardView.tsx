@@ -8,60 +8,95 @@ interface FlashcardViewProps {
   vocabulary: VocabularyWord[];
   onClose: () => void;
   onUpdateWord: (id: string, updates: Partial<VocabularyWord>) => void;
+  onDeleteWord?: (id: string) => void;
 }
 
 interface ReviewStats {
   totalReviewed: number;
-  againCount: number;
-  hardCount: number;
-  goodCount: number;
-  easyCount: number;
+  forgotCount: number;
+  rememberedCount: number;
+  masteredCount: number;
   startTime: number;
 }
 
-const FlashcardView: React.FC<FlashcardViewProps> = ({ vocabulary, onClose, onUpdateWord }) => {
+const FlashcardView: React.FC<FlashcardViewProps> = ({ vocabulary, onClose, onUpdateWord, onDeleteWord }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [reviewedWords, setReviewedWords] = useState<Set<string>>(new Set());
+  const [remainingWords, setRemainingWords] = useState<VocabularyWord[]>(vocabulary);
   const [stats, setStats] = useState<ReviewStats>({
     totalReviewed: 0,
-    againCount: 0,
-    hardCount: 0,
-    goodCount: 0,
-    easyCount: 0,
+    forgotCount: 0,
+    rememberedCount: 0,
+    masteredCount: 0,
     startTime: Date.now()
   });
   const [showSummary, setShowSummary] = useState(false);
 
-  const currentWord = vocabulary[currentIndex];
-  const progress = ((currentIndex + 1) / vocabulary.length) * 100;
+  const currentWord = remainingWords[currentIndex];
+  const progress = remainingWords.length > 0 ? ((currentIndex + 1) / remainingWords.length) * 100 : 100;
 
-  const handleReview = (quality: 'again' | 'hard' | 'good' | 'easy') => {
+  const handleReview = (result: 'forgot' | 'remembered' | 'mastered') => {
     if (!currentWord) return;
 
-    // Update word with SRS algorithm
-    const qualityNumber = mapQualityRating(quality);
-    const updatedWord = updateWordWithReview(currentWord, qualityNumber);
-    onUpdateWord(currentWord.id, updatedWord);
+    // Map result to quality rating for SRS
+    let qualityNumber: number;
+    if (result === 'forgot') {
+      qualityNumber = 0; // Complete blackout - reset
+    } else if (result === 'remembered') {
+      qualityNumber = 3; // Good recall
+    } else { // mastered
+      qualityNumber = 5; // Perfect recall
+    }
 
     // Update stats
     setStats(prev => ({
       ...prev,
       totalReviewed: prev.totalReviewed + 1,
-      [`${quality}Count`]: (prev as any)[`${quality}Count`] + 1
+      [`${result}Count`]: (prev as any)[`${result}Count`] + 1
     }));
 
     setReviewedWords(prev => new Set(prev).add(currentWord.id));
 
-    // Move to next card or show summary
-    if (currentIndex < vocabulary.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+    // Handle mastered words - remove from deck
+    if (result === 'mastered') {
+      // Remove from remaining words
+      const newRemaining = remainingWords.filter((_, idx) => idx !== currentIndex);
+      setRemainingWords(newRemaining);
+      
+      // Update proficiency to mastered
+      onUpdateWord(currentWord.id, { 
+        proficiencyLevel: 'mastered',
+        srsData: {
+          ...currentWord.srsData,
+          repetitions: currentWord.srsData.repetitions + 1,
+          nextReviewDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year from now
+        }
+      });
+
+      // Check if we're done
+      if (newRemaining.length === 0) {
+        setShowSummary(true);
+      } else if (currentIndex >= newRemaining.length) {
+        // If we were at the end, go to the new last card
+        setCurrentIndex(newRemaining.length - 1);
+      }
+      // else: stay at current index (which now shows the next card)
     } else {
-      setShowSummary(true);
+      // For forgot and remembered, update with SRS algorithm
+      const updatedWord = updateWordWithReview(currentWord, qualityNumber);
+      onUpdateWord(currentWord.id, updatedWord);
+
+      // Move to next card or show summary
+      if (currentIndex < remainingWords.length - 1) {
+        setCurrentIndex(currentIndex + 1);
+      } else {
+        setShowSummary(true);
+      }
     }
   };
 
   const handleSkip = () => {
-    if (currentIndex < vocabulary.length - 1) {
+    if (currentIndex < remainingWords.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
       setShowSummary(true);
@@ -90,7 +125,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = ({ vocabulary, onClose, onUp
 
   if (showSummary) {
     const accuracy = stats.totalReviewed > 0
-      ? Math.round(((stats.goodCount + stats.easyCount) / stats.totalReviewed) * 100)
+      ? Math.round(((stats.rememberedCount + stats.masteredCount) / stats.totalReviewed) * 100)
       : 0;
 
     return (
@@ -113,11 +148,25 @@ const FlashcardView: React.FC<FlashcardViewProps> = ({ vocabulary, onClose, onUp
               </div>
             </div>
             <div className="summary-breakdown">
-              <div className="breakdown-item again">Again: {stats.againCount}</div>
-              <div className="breakdown-item hard">Hard: {stats.hardCount}</div>
-              <div className="breakdown-item good">Good: {stats.goodCount}</div>
-              <div className="breakdown-item easy">Easy: {stats.easyCount}</div>
+              <div className="breakdown-item forgot">
+                <span className="breakdown-icon">❌</span>
+                <span className="breakdown-text">Forgot: {stats.forgotCount}</span>
+              </div>
+              <div className="breakdown-item remembered">
+                <span className="breakdown-icon">✓</span>
+                <span className="breakdown-text">Remembered: {stats.rememberedCount}</span>
+              </div>
+              <div className="breakdown-item mastered">
+                <span className="breakdown-icon">⭐</span>
+                <span className="breakdown-text">Mastered: {stats.masteredCount}</span>
+              </div>
             </div>
+            {stats.masteredCount > 0 && (
+              <div className="mastery-message">
+                <p>🎉 Congratulations! You've mastered {stats.masteredCount} word{stats.masteredCount > 1 ? 's' : ''}!</p>
+                <p className="mastery-note">These words have been removed from your review deck and marked as mastered.</p>
+              </div>
+            )}
             <button className="primary-button" onClick={onClose}>
               Back to Chat
             </button>
@@ -138,7 +187,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = ({ vocabulary, onClose, onUp
           </button>
           <div className="flashcard-progress">
             <div className="progress-text">
-              {currentIndex + 1} / {vocabulary.length}
+              {currentIndex + 1} / {remainingWords.length}
             </div>
             <div className="progress-bar">
               <div className="progress-fill" style={{ width: `${progress}%` }} />
