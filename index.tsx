@@ -100,7 +100,7 @@ const DanishTutorApp = () => {
 
   const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0 });
   const [isDraggingTooltip, setIsDraggingTooltip] = useState(false);
-  const [tooltipDragOffset, setTooltipDragOffset] = useState({ x: 0, y: 0 });
+  const tooltipDragOffsetRef = useRef({ x: 0, y: 0 });
 
   // Keyboard shortcuts
   const shortcuts: ShortcutHandler[] = [
@@ -349,29 +349,35 @@ const DanishTutorApp = () => {
   };
 
   const handleTooltipMouseDown = (e: React.MouseEvent) => {
+    // Don't start dragging if clicking on the close button
+    if ((e.target as HTMLElement).classList.contains('tooltip-close')) {
+      return;
+    }
+    
     setIsDraggingTooltip(true);
-    setTooltipDragOffset({
+    tooltipDragOffsetRef.current = {
       x: e.clientX - tooltip.x,
       y: e.clientY - tooltip.y
-    });
+    };
     e.preventDefault();
-  };
-
-  const handleTooltipMouseMove = (e: MouseEvent) => {
-    if (isDraggingTooltip) {
-      setTooltip(current => ({
-        ...current,
-        x: e.clientX - tooltipDragOffset.x,
-        y: e.clientY - tooltipDragOffset.y
-      }));
-    }
-  };
-
-  const handleTooltipMouseUp = () => {
-    setIsDraggingTooltip(false);
+    e.stopPropagation();
   };
 
   useEffect(() => {
+    const handleTooltipMouseMove = (e: MouseEvent) => {
+      if (isDraggingTooltip) {
+        setTooltip(current => ({
+          ...current,
+          x: e.clientX - tooltipDragOffsetRef.current.x,
+          y: e.clientY - tooltipDragOffsetRef.current.y
+        }));
+      }
+    };
+
+    const handleTooltipMouseUp = () => {
+      setIsDraggingTooltip(false);
+    };
+
     if (isDraggingTooltip) {
       document.addEventListener('mousemove', handleTooltipMouseMove);
       document.addEventListener('mouseup', handleTooltipMouseUp);
@@ -380,7 +386,7 @@ const DanishTutorApp = () => {
         document.removeEventListener('mouseup', handleTooltipMouseUp);
       };
     }
-  }, [isDraggingTooltip, tooltipDragOffset]);
+  }, [isDraggingTooltip]);
 
   const handleMaximizeToggle = () => setIsMaximized(!isMaximized);
 
@@ -486,8 +492,7 @@ const DanishTutorApp = () => {
           className="tooltip draggable-tooltip" 
           style={{ 
             top: `${tooltip.y}px`, 
-            left: `${tooltip.x}px`,
-            cursor: isDraggingTooltip ? 'grabbing' : 'grab'
+            left: `${tooltip.x}px`
           }}
           onMouseDown={handleTooltipMouseDown}
         >

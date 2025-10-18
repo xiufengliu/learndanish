@@ -314,6 +314,11 @@ button:disabled {
   flex-direction: column;
   gap: 8px;
   padding: 8px;
+  cursor: grab;
+}
+
+.draggable-tooltip:active {
+  cursor: grabbing;
 }
 
 .tooltip-header {
@@ -324,16 +329,15 @@ button:disabled {
   text-align: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   cursor: grab;
-}
-
-.tooltip-header:active {
-  cursor: grabbing;
+  user-select: none;
 }
 
 .tooltip-content {
   padding: 8px;
   line-height: 1.5;
   flex: 1;
+  cursor: grab;
+  user-select: none;
 }
 
 .tooltip-close {
@@ -349,10 +353,13 @@ button:disabled {
   padding: 4px 8px;
   opacity: 0.7;
   transition: opacity 0.2s ease;
+  user-select: none;
 }
 
 .tooltip-close:hover {
   opacity: 1;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
 }
 
 .container.maximized .tooltip {
