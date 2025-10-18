@@ -92,6 +92,9 @@ const DanishTutorApp = () => {
   const [showGrammar, setShowGrammar] = useState(false);
   
   const dueWords = getDueWords(vocabulary);
+  
+  // Get all non-mastered words for flashcard fallback
+  const nonMasteredWords = vocabulary.filter(word => word.proficiencyLevel !== 'mastered');
 
   const chatHistoryRef = useRef<HTMLDivElement>(null);
   const sessionPromiseRef = useRef<any>(null); // Using 'any' for the promise that resolves to the session
@@ -599,7 +602,7 @@ const DanishTutorApp = () => {
       )}
       {showFlashcards && (
         <FlashcardView
-          vocabulary={dueWords.length > 0 ? dueWords : vocabulary}
+          vocabulary={dueWords.length > 0 ? dueWords : nonMasteredWords}
           onClose={() => setShowFlashcards(false)}
           onUpdateWord={updateWord}
         />
