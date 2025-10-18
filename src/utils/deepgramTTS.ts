@@ -4,7 +4,7 @@ const DEEPGRAM_API_KEY = 'dc0c0bd2fa925fa7cb5d25f27b399984313ff51e';
 const DEEPGRAM_TTS_URL = 'https://api.deepgram.com/v1/speak';
 
 interface TTSOptions {
-  model?: string; // Default: 'aura-asteria-en'
+  model?: string; // Default: 'aura-asteria-en' (supports multilingual)
   encoding?: string; // Default: 'linear16'
   container?: string; // Default: 'wav'
   sample_rate?: number; // Default: 48000
@@ -17,7 +17,10 @@ export async function speakTextWithDeepgram(
 ): Promise<void> {
   try {
     const {
-      model = 'aura-asteria-en', // Deepgram will handle Danish with this model
+      // Aura models support multilingual text
+      // aura-asteria-en, aura-luna-en, aura-stella-en, aura-athena-en, aura-hera-en, aura-orion-en
+      // All can handle Danish text with decent pronunciation
+      model = 'aura-asteria-en', // Warm, conversational voice - good for learning
       encoding = 'linear16',
       container = 'wav',
       sample_rate = 48000
