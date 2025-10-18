@@ -34,6 +34,7 @@ export function useSpacedRepetition(): UseSpacedRepetitionResult {
   const getDueWords = useCallback((vocabulary: VocabularyWord[]): VocabularyWord[] => {
     const now = new Date();
     return vocabulary.filter(word => 
+      word.proficiencyLevel !== 'mastered' && // Exclude mastered words
       new Date(word.srsData.nextReviewDate) <= now
     ).sort((a, b) => 
       new Date(a.srsData.nextReviewDate).getTime() - new Date(b.srsData.nextReviewDate).getTime()
