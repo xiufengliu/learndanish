@@ -32,6 +32,14 @@ const Flashcard: React.FC<FlashcardProps> = ({ word, onReview, showContext = tru
     setIsFlipped(false);
   };
 
+  const handleMasteryResponse = (mastered: boolean) => {
+    if (mastered) {
+      handleReview('mastered');
+    } else {
+      handleReview('forgot');
+    }
+  };
+
   const handleSpeak = (e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -108,37 +116,29 @@ const Flashcard: React.FC<FlashcardProps> = ({ word, onReview, showContext = tru
         </div>
       </div>
 
-      {isFlipped && (
-        <div className="flashcard-buttons">
-          <button 
-            className="review-button forgot"
-            onClick={(e) => { e.stopPropagation(); handleReview('forgot'); }}
-            title="I forgot this word - need to review again"
-          >
-            <span className="button-icon">❌</span>
-            <span className="button-text">Forgot</span>
-            <span className="button-subtitle">Review again</span>
-          </button>
-          <button 
-            className="review-button remembered"
-            onClick={(e) => { e.stopPropagation(); handleReview('remembered'); }}
-            title="I remembered this word"
-          >
-            <span className="button-icon">✓</span>
-            <span className="button-text">Remembered</span>
-            <span className="button-subtitle">Still learning</span>
-          </button>
+      <div className="flashcard-buttons">
+        <div className="mastery-question">Do you master this word?</div>
+        <div className="mastery-buttons">
           <button 
             className="review-button mastered"
-            onClick={(e) => { e.stopPropagation(); handleReview('mastered'); }}
+            onClick={(e) => { e.stopPropagation(); handleMasteryResponse(true); }}
             title="I've mastered this word - remove from review"
           >
-            <span className="button-icon">⭐</span>
-            <span className="button-text">Mastered</span>
+            <span className="button-icon">✓</span>
+            <span className="button-text">Yes</span>
             <span className="button-subtitle">Remove from deck</span>
           </button>
+          <button 
+            className="review-button forgot"
+            onClick={(e) => { e.stopPropagation(); handleMasteryResponse(false); }}
+            title="I need more practice with this word"
+          >
+            <span className="button-icon">❌</span>
+            <span className="button-text">No</span>
+            <span className="button-subtitle">Keep reviewing</span>
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 };

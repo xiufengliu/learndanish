@@ -13,8 +13,7 @@ interface FlashcardViewProps {
 
 interface ReviewStats {
   totalReviewed: number;
-  forgotCount: number;
-  rememberedCount: number;
+  notMasteredCount: number;
   masteredCount: number;
   startTime: number;
 }
@@ -25,8 +24,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = ({ vocabulary, onClose, onUp
   const [remainingWords, setRemainingWords] = useState<VocabularyWord[]>(vocabulary);
   const [stats, setStats] = useState<ReviewStats>({
     totalReviewed: 0,
-    forgotCount: 0,
-    rememberedCount: 0,
+    notMasteredCount: 0,
     masteredCount: 0,
     startTime: Date.now()
   });
@@ -52,7 +50,8 @@ const FlashcardView: React.FC<FlashcardViewProps> = ({ vocabulary, onClose, onUp
     setStats(prev => ({
       ...prev,
       totalReviewed: prev.totalReviewed + 1,
-      [`${result}Count`]: (prev as any)[`${result}Count`] + 1
+      masteredCount: result === 'mastered' ? prev.masteredCount + 1 : prev.masteredCount,
+      notMasteredCount: result === 'forgot' ? prev.notMasteredCount + 1 : prev.notMasteredCount
     }));
 
     setReviewedWords(prev => new Set(prev).add(currentWord.id));
@@ -125,7 +124,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = ({ vocabulary, onClose, onUp
 
   if (showSummary) {
     const accuracy = stats.totalReviewed > 0
-      ? Math.round(((stats.rememberedCount + stats.masteredCount) / stats.totalReviewed) * 100)
+      ? Math.round((stats.masteredCount / stats.totalReviewed) * 100)
       : 0;
 
     return (
@@ -140,7 +139,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = ({ vocabulary, onClose, onUp
               </div>
               <div className="stat-item">
                 <span className="stat-value">{accuracy}%</span>
-                <span className="stat-label">Accuracy</span>
+                <span className="stat-label">Mastery Rate</span>
               </div>
               <div className="stat-item">
                 <span className="stat-value">{minutes}:{seconds.toString().padStart(2, '0')}</span>
@@ -148,17 +147,13 @@ const FlashcardView: React.FC<FlashcardViewProps> = ({ vocabulary, onClose, onUp
               </div>
             </div>
             <div className="summary-breakdown">
+              <div className="breakdown-item mastered">
+                <span className="breakdown-icon">✓</span>
+                <span className="breakdown-text">Mastered: {stats.masteredCount}</span>
+              </div>
               <div className="breakdown-item forgot">
                 <span className="breakdown-icon">❌</span>
-                <span className="breakdown-text">Forgot: {stats.forgotCount}</span>
-              </div>
-              <div className="breakdown-item remembered">
-                <span className="breakdown-icon">✓</span>
-                <span className="breakdown-text">Remembered: {stats.rememberedCount}</span>
-              </div>
-              <div className="breakdown-item mastered">
-                <span className="breakdown-icon">⭐</span>
-                <span className="breakdown-text">Mastered: {stats.masteredCount}</span>
+                <span className="breakdown-text">Need Practice: {stats.notMasteredCount}</span>
               </div>
             </div>
             {stats.masteredCount > 0 && (
