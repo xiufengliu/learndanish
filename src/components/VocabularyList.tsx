@@ -22,7 +22,7 @@ const speakText = (text: string, lang: string = 'da-DK') => {
 };
 
 type SortBy = 'recent' | 'alphabetical' | 'proficiency';
-type FilterBy = 'all' | 'new' | 'learning' | 'familiar' | 'mastered';
+type FilterBy = 'all' | 'unmastered' | 'mastered';
 
 const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, onDeleteWord, onUpdateWord, onClearAll }) => {
   const [sortBy, setSortBy] = useState<SortBy>('recent');
@@ -41,7 +41,8 @@ const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, on
 
   const filteredAndSorted = vocabulary
     .filter(word => {
-      if (filterBy !== 'all' && word.proficiencyLevel !== filterBy) return false;
+      if (filterBy === 'mastered' && word.proficiencyLevel !== 'mastered') return false;
+      if (filterBy === 'unmastered' && word.proficiencyLevel === 'mastered') return false;
       if (searchTerm && !word.danishWord.toLowerCase().includes(searchTerm.toLowerCase()) &&
         !word.englishTranslation.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false;
@@ -192,9 +193,7 @@ const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, onClose, on
 
             <select value={filterBy} onChange={(e) => setFilterBy(e.target.value as FilterBy)}>
               <option value="all">All Words</option>
-              <option value="new">New</option>
-              <option value="learning">Learning</option>
-              <option value="familiar">Familiar</option>
+              <option value="unmastered">Unmastered</option>
               <option value="mastered">Mastered</option>
             </select>
           </div>
