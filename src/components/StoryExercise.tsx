@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 type AudienceLanguage = 'english' | 'chinese';
 
-type QuestionType = 'translation' | 'cloze' | 'preposition' | 'order' | 'comprehension';
+type QuestionType = 'translation' | 'cloze' | 'preposition' | 'comprehension';
 type OptionStatus = 'idle' | 'correct' | 'incorrect';
 
 interface ExerciseOption {
@@ -41,6 +41,7 @@ interface StoryExerciseProps {
 }
 
 const QUESTIONS_PER_TEST = 10;
+const MIN_COMPREHENSION_PER_TEST = Math.min(QUESTIONS_PER_TEST, 5);
 
 function shuffleArray<T>(items: T[]): T[] {
   const array = [...items];
@@ -210,61 +211,6 @@ function buildPrepositionQuestion(
   };
 }
 
-function buildOrderQuestion(
-  danish: string,
-  english: string,
-  index: number,
-  audienceLanguage: AudienceLanguage
-): StoryExerciseQuestion | null {
-  const tokens = sentenceTokens(danish);
-  if (tokens.length < 4) {
-    return null;
-  }
-
-  const shuffled = shuffleArray(tokens).slice(0, Math.min(6, tokens.length));
-  if (shuffled.join(' ') === tokens.slice(0, shuffled.length).join(' ')) {
-    shuffled.reverse();
-  }
-
-  const prompt =
-    audienceLanguage === 'chinese'
-      ? '请点击以下单词，按正确顺序组成丹麦语句子：'
-      : 'Click the words with the correct order to rebuild the Danish sentence:';
-
-  const explanation =
-    audienceLanguage === 'chinese'
-      ? `正确句子：“${danish}”。意思是 “${english}”。`
-      : `Correct sentence: “${danish}”. It means “${english}”.`;
-
-  const optionLabel =
-    audienceLanguage === 'chinese'
-      ? '提示：选择正确的意思即可（顺序练习即将推出）。'
-      : 'Tip: choose the correct meaning (ordering mode coming soon).';
-
-  return {
-    id: `story-order-${index}`,
-    type: 'order',
-    danishSentence: danish,
-    prompt,
-    body: shuffled.join(' / '),
-    options: [
-      {
-        id: `${index}-order-correct`,
-        label: english,
-        isCorrect: true,
-        explanation
-      },
-      {
-        id: `${index}-order-tip`,
-        label: optionLabel,
-        isCorrect: false,
-        explanation
-      }
-    ],
-    difficultyScore: tokens.length + 5
-  };
-}
-
 function generateStoryQuestions(
   danishSentences: string[],
   englishSentences: string[],
@@ -281,13 +227,17 @@ function generateStoryQuestions(
     return [];
   }
 
+  const maxTranslationQuestions = Math.max(1, Math.min(Math.ceil(QUESTIONS_PER_TEST * 0.2), paired.length));
+  const maxClozeQuestions = Math.max(1, Math.min(Math.ceil(QUESTIONS_PER_TEST * 0.3), paired.length));
+  const maxPrepositionQuestions = Math.max(1, Math.min(Math.ceil(QUESTIONS_PER_TEST * 0.2), paired.length));
+
   const translationQuestions: StoryExerciseQuestion[] = [];
   const clozeQuestions: StoryExerciseQuestion[] = [];
   const prepositionQuestions: StoryExerciseQuestion[] = [];
-  const orderQuestions: StoryExerciseQuestion[] = [];
 
-  const maxTranslationQuestions = Math.max(1, Math.ceil(paired.length / 4));
   let translationCreated = 0;
+  let clozeCreated = 0;
+  let prepositionCreated = 0;
 
   paired.forEach((item, index) => {
     if (translationCreated < maxTranslationQuestions) {
@@ -303,35 +253,36 @@ function generateStoryQuestions(
       translationCreated += 1;
     }
 
-    const clozeDistractors = pickRandom(
-      paired
-        .filter((other) => other.english !== item.english)
-        .flatMap((other) => sentenceTokens(other.danish)),
-      3
-    );
-    const clozeQuestion = buildClozeQuestion(item.danish, item.english, clozeDistractors, index, audienceLanguage);
-    if (clozeQuestion) {
-      clozeQuestions.push(clozeQuestion);
+    if (clozeCreated < maxClozeQuestions) {
+      const clozeDistractors = pickRandom(
+        paired
+          .filter((other) => other.english !== item.english)
+          .flatMap((other) => sentenceTokens(other.danish)),
+        3
+      );
+      const clozeQuestion = buildClozeQuestion(item.danish, item.english, clozeDistractors, index, audienceLanguage);
+      if (clozeQuestion) {
+        clozeQuestions.push(clozeQuestion);
+        clozeCreated += 1;
+      }
     }
 
-    const prepositionDistractors = pickRandom(
-      commonPrepositions.filter((prep) => !item.danish.toLowerCase().includes(prep)),
-      3
-    );
-    const prepositionQuestion = buildPrepositionQuestion(
-      item.danish,
-      item.english,
-      prepositionDistractors,
-      index,
-      audienceLanguage
-    );
-    if (prepositionQuestion) {
-      prepositionQuestions.push(prepositionQuestion);
-    }
-
-    const orderQuestion = buildOrderQuestion(item.danish, item.english, index, audienceLanguage);
-    if (orderQuestion) {
-      orderQuestions.push(orderQuestion);
+    if (prepositionCreated < maxPrepositionQuestions) {
+      const prepositionDistractors = pickRandom(
+        commonPrepositions.filter((prep) => !item.danish.toLowerCase().includes(prep)),
+        3
+      );
+      const prepositionQuestion = buildPrepositionQuestion(
+        item.danish,
+        item.english,
+        prepositionDistractors,
+        index,
+        audienceLanguage
+      );
+      if (prepositionQuestion) {
+        prepositionQuestions.push(prepositionQuestion);
+        prepositionCreated += 1;
+      }
     }
   });
 
@@ -392,7 +343,7 @@ function generateStoryQuestions(
         danishSentence: paired[targetIndex].danish,
         prompt,
         options: shuffleArray(options),
-        difficultyScore: paired[targetIndex].danish.split(/\s+/).length + 6
+        difficultyScore: sentenceTokens(paired[targetIndex].danish).length + 1
       };
     };
 
@@ -407,29 +358,49 @@ function generateStoryQuestions(
     }
   }
 
-  const createTrueStatementQuestion = (questionIndex: number): StoryExerciseQuestion | null => {
-    if (paired.length === 0) {
+  const createTrueStatementQuestion = (targetIdx: number, serial: number): StoryExerciseQuestion | null => {
+    const target = paired[targetIdx];
+    if (!target) {
       return null;
     }
 
-    const correctIdx = questionIndex % paired.length;
-    const correctSentence = paired[correctIdx].english;
+    const correctSentence = target.english;
+    if (!correctSentence) {
+      return null;
+    }
 
-    const distractorSources = pickRandom(
-      paired
-        .map((item) => item.english)
-        .filter((sentence) => sentence !== correctSentence),
-      3
-    );
+    const otherSentences = paired
+      .map((item) => item.english)
+      .filter((sentence) => sentence && sentence !== correctSentence);
 
-    const buildNegativeStatement = (sentence: string): string =>
+    const genericFalseStatements = audienceLanguage === 'chinese'
+      ? [
+          '故事中没有提到去外太空旅行。',
+          '故事里没有出现机器人角色。',
+          '没有任何角色谈到天气情况。',
+          '故事没有描述任何节日活动。'
+        ]
+      : [
+          'The story never mentions traveling to outer space.',
+          'No robot characters appear in the story.',
+          'None of the characters comment on the weather.',
+          'The story does not describe any holiday celebration.'
+        ];
+
+    const negativeStatements = pickRandom(otherSentences, Math.min(2, otherSentences.length)).map((sentence) =>
       audienceLanguage === 'chinese'
         ? `故事中并没有提到：“${sentence}”。`
-        : `It is not true that ${sentence}.`;
+        : `It is not true that ${sentence}.`
+    );
+
+    const remainingNeeded = Math.max(0, 3 - negativeStatements.length);
+    const additionalGenerics = remainingNeeded > 0
+      ? pickRandom(genericFalseStatements, remainingNeeded)
+      : [];
 
     const options: ExerciseOption[] = [
       {
-        id: `${questionIndex}-comp-true-correct`,
+        id: `${serial}-comp-true-correct`,
         label: correctSentence,
         isCorrect: true,
         explanation:
@@ -437,40 +408,71 @@ function generateStoryQuestions(
             ? '这句话确实出现在故事中。'
             : 'This statement appears in the story.'
       },
-      ...distractorSources.map<ExerciseOption>((sentence, idx) => ({
-        id: `${questionIndex}-comp-true-${idx}`,
-        label: buildNegativeStatement(sentence),
+      ...negativeStatements.map<ExerciseOption>((statement, idx) => ({
+        id: `${serial}-comp-true-neg-${idx}`,
+        label: statement,
         isCorrect: false,
         explanation:
           audienceLanguage === 'chinese'
-            ? `原文确实写道：“${sentence}”，因此该否定说法不正确。`
-            : `The story actually states “${sentence}”, so this negative claim is incorrect.`
+            ? '原文描述了相反的情节。'
+            : 'The original story describes the opposite event.'
+      })),
+      ...additionalGenerics.map<ExerciseOption>((statement, idx) => ({
+        id: `${serial}-comp-true-generic-${idx}`,
+        label: statement,
+        isCorrect: false,
+        explanation:
+          audienceLanguage === 'chinese'
+            ? '这些情节未在故事中出现。'
+            : 'This event never happens in the story.'
       }))
     ];
 
     return {
-      id: `story-comprehension-true-${questionIndex}`,
+      id: `story-comprehension-true-${serial}`,
       type: 'comprehension',
-      danishSentence: paired[correctIdx].danish,
+      danishSentence: target.danish,
       prompt:
         audienceLanguage === 'chinese'
           ? '以下哪句话与故事描述一致？'
           : 'Which of these statements matches the story?',
       options: shuffleArray(options),
-      difficultyScore: paired[correctIdx].danish.split(/\s+/).length + 7
+      difficultyScore: sentenceTokens(target.danish).length + 2
     };
   };
 
-  const trueStatementQuestion = createTrueStatementQuestion(2);
-  if (trueStatementQuestion) {
-    comprehensionQuestions.push(trueStatementQuestion);
+  const desiredComprehensionTotal = Math.min(
+    paired.length * 2,
+    Math.max(
+      MIN_COMPREHENSION_PER_TEST,
+      translationQuestions.length + clozeQuestions.length + prepositionQuestions.length
+    )
+  );
+
+  let serialCounter = 0;
+  for (
+    let idx = 0;
+    idx < paired.length && comprehensionQuestions.length < desiredComprehensionTotal;
+    idx += 1
+  ) {
+    const question = createTrueStatementQuestion(idx, serialCounter++);
+    if (question) {
+      comprehensionQuestions.push(question);
+    }
+  }
+
+  while (comprehensionQuestions.length < desiredComprehensionTotal) {
+    const question = createTrueStatementQuestion(serialCounter % paired.length, serialCounter++);
+    if (!question) {
+      break;
+    }
+    comprehensionQuestions.push(question);
   }
 
   const combined = [
     ...translationQuestions,
     ...clozeQuestions,
     ...prepositionQuestions,
-    ...orderQuestions,
     ...comprehensionQuestions
   ];
 
@@ -484,17 +486,76 @@ function prepareQuestionBatches(
 ): StoryExerciseQuestionState[][] {
   const questions = generateStoryQuestions(danishSentences, englishSentences, audienceLanguage);
 
+  const comprehensionPool = questions.filter((question) => question.type === 'comprehension');
+  const otherPool = questions.filter((question) => question.type !== 'comprehension');
+
+  const totalQuestions = comprehensionPool.length + otherPool.length;
+  if (totalQuestions === 0) {
+    return [];
+  }
+
+  const totalBatches = Math.max(1, Math.ceil(totalQuestions / QUESTIONS_PER_TEST));
   const batches: StoryExerciseQuestionState[][] = [];
-  for (let i = 0; i < questions.length; i += QUESTIONS_PER_TEST) {
-    const batch = questions.slice(i, i + QUESTIONS_PER_TEST).map((question) => ({
+
+  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+    const remainingBatches = totalBatches - batchIndex;
+    const batchQuestions: StoryExerciseQuestion[] = [];
+
+    let comprehensionToTake = 0;
+    if (comprehensionPool.length > 0) {
+      if (comprehensionPool.length >= MIN_COMPREHENSION_PER_TEST * remainingBatches) {
+        comprehensionToTake = Math.min(MIN_COMPREHENSION_PER_TEST, comprehensionPool.length, QUESTIONS_PER_TEST);
+      } else {
+        comprehensionToTake = Math.min(
+          Math.max(1, Math.ceil(comprehensionPool.length / remainingBatches)),
+          comprehensionPool.length,
+          QUESTIONS_PER_TEST
+        );
+      }
+    }
+
+    for (let i = 0; i < comprehensionToTake; i += 1) {
+      const next = comprehensionPool.shift();
+      if (next) {
+        batchQuestions.push(next);
+      }
+    }
+
+    while (batchQuestions.length < QUESTIONS_PER_TEST && (otherPool.length > 0 || comprehensionPool.length > 0)) {
+      if (otherPool.length > 0) {
+        const nextOther = otherPool.shift();
+        if (nextOther) {
+          batchQuestions.push(nextOther);
+        }
+      } else if (comprehensionPool.length > 0) {
+        const nextComp = comprehensionPool.shift();
+        if (nextComp) {
+          batchQuestions.push(nextComp);
+        }
+      } else {
+        break;
+      }
+    }
+
+    while (batchQuestions.length < QUESTIONS_PER_TEST && comprehensionPool.length > 0) {
+      const nextComp = comprehensionPool.shift();
+      if (!nextComp) {
+        break;
+      }
+      batchQuestions.push(nextComp);
+    }
+
+    const preparedBatch = batchQuestions.map((question) => ({
       ...question,
       attempts: 0,
       incorrectAttempts: 0,
       answeredCorrectly: false,
       firstAttemptCorrect: false
     }));
-    batches.push(batch);
+
+    batches.push(preparedBatch);
   }
+
   return batches;
 }
 
@@ -505,14 +566,12 @@ function localizeStoryQuestionType(type: QuestionType, audienceLanguage: Audienc
           translation: '翻译理解',
           cloze: '完形填空',
           preposition: '介词用法',
-          order: '语序提示',
           comprehension: '阅读理解'
         }
       : {
           translation: 'Translation',
           cloze: 'Cloze',
           preposition: 'Prepositions',
-          order: 'Word order',
           comprehension: 'Comprehension'
         };
   return mapping[type];
