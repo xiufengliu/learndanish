@@ -111,7 +111,7 @@ export async function generateStory(
 Story requirements:
 - Difficulty guidance: ${difficultyDescriptions[difficultyLevel]}
 - Scenario inspiration: ${difficultyTopics[difficultyLevel]}
-- Length: 5-7 sentences.
+- Length: 7-10 sentences.
 - Include engaging content and, when natural, a cultural touch.
 - Provide the full translation in ${translationLanguage}, aligning sentence-by-sentence with the Danish text.
 
