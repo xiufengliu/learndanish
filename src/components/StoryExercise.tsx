@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 type AudienceLanguage = 'english' | 'chinese';
 
+type QuestionType = 'translation' | 'cloze' | 'preposition' | 'order';
 type OptionStatus = 'idle' | 'correct' | 'incorrect';
 
 interface ExerciseOption {
@@ -15,8 +16,10 @@ interface ExerciseOption {
 
 interface StoryExerciseQuestion {
   id: string;
+  type: QuestionType;
   danishSentence: string;
   prompt: string;
+  body?: string;
   options: ExerciseOption[];
   difficultyScore: number;
 }
@@ -39,6 +42,229 @@ interface StoryExerciseProps {
 
 const QUESTIONS_PER_TEST = 10;
 
+function shuffleArray<T>(items: T[]): T[] {
+  const array = [...items];
+  for (let i = array.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+function pickRandom<T>(items: T[], count: number): T[] {
+  if (items.length <= count) {
+    return shuffleArray(items);
+  }
+  return shuffleArray(items).slice(0, count);
+}
+
+function sentenceTokens(sentence: string): string[] {
+  return sentence.split(/\s+/).filter(Boolean);
+}
+
+function buildTranslationQuestion(
+  danish: string,
+  english: string,
+  distractors: string[],
+  index: number,
+  audienceLanguage: AudienceLanguage
+): StoryExerciseQuestion {
+  const prompt =
+    audienceLanguage === 'chinese'
+      ? `“${danish}” 的正确意思是什么？`
+      : `What is the correct meaning of “${danish}”?`;
+
+  const baseExplanation =
+    audienceLanguage === 'chinese'
+      ? `这句话的意思是：“${english}”。`
+      : `This sentence means: “${english}”.`;
+
+  const options = shuffleArray<ExerciseOption>([
+    {
+      id: `${index}-translation-correct`,
+      label: english,
+      isCorrect: true,
+      explanation: baseExplanation
+    },
+    ...distractors.map<ExerciseOption>((choice, choiceIndex) => ({
+      id: `${index}-translation-${choiceIndex}`,
+      label: choice,
+      isCorrect: false,
+      explanation: baseExplanation
+    }))
+  ]);
+
+  return {
+    id: `story-translation-${index}`,
+    type: 'translation',
+    danishSentence: danish,
+    prompt,
+    options,
+    difficultyScore: sentenceTokens(danish).length
+  };
+}
+
+function buildClozeQuestion(
+  danish: string,
+  english: string,
+  distractors: string[],
+  index: number,
+  audienceLanguage: AudienceLanguage
+): StoryExerciseQuestion | null {
+  const tokens = sentenceTokens(danish);
+  if (tokens.length < 3) {
+    return null;
+  }
+
+  const midIndex = Math.floor(tokens.length / 2);
+  const removedToken = tokens[midIndex];
+  const clozeTokens = [...tokens];
+  clozeTokens[midIndex] = '_____';
+  const clozeSentence = clozeTokens.join(' ');
+
+  const baseExplanation =
+    audienceLanguage === 'chinese'
+      ? `缺失的单词是 “${removedToken}”，整句意思是 “${english}”。`
+      : `The missing word is “${removedToken}”. The full sentence means “${english}”.`;
+
+  const options = shuffleArray<ExerciseOption>([
+    {
+      id: `${index}-cloze-correct`,
+      label: removedToken,
+      isCorrect: true,
+      explanation: baseExplanation
+    },
+    ...distractors.map<ExerciseOption>((choice, choiceIndex) => ({
+      id: `${index}-cloze-${choiceIndex}`,
+      label: choice,
+      isCorrect: false,
+      explanation: baseExplanation
+    }))
+  ]);
+
+  return {
+    id: `story-cloze-${index}`,
+    type: 'cloze',
+    danishSentence: danish,
+    prompt:
+      audienceLanguage === 'chinese'
+        ? '请选择最合适的单词填入空格：'
+        : 'Choose the best word to fill in the blank:',
+    body: clozeSentence,
+    options,
+    difficultyScore: sentenceTokens(danish).length + 3
+  };
+}
+
+const commonPrepositions = ['i', 'på', 'til', 'af', 'med', 'for', 'om', 'under', 'over', 'fra', 'efter', 'før'];
+
+function buildPrepositionQuestion(
+  danish: string,
+  english: string,
+  distractorPrepositions: string[],
+  index: number,
+  audienceLanguage: AudienceLanguage
+): StoryExerciseQuestion | null {
+  const tokens = sentenceTokens(danish);
+  const prepositionIndex = tokens.findIndex((token) => commonPrepositions.includes(token.toLowerCase()));
+  if (prepositionIndex === -1) {
+    return null;
+  }
+
+  const missing = tokens[prepositionIndex];
+  const modifiedTokens = [...tokens];
+  modifiedTokens[prepositionIndex] = '_____';
+  const clozeSentence = modifiedTokens.join(' ');
+
+  const baseExplanation =
+    audienceLanguage === 'chinese'
+      ? `这里应该使用介词 “${missing}”，原句意思是 “${english}”。`
+      : `The correct preposition is “${missing}”. The original sentence means “${english}”.`;
+
+  const options = shuffleArray<ExerciseOption>([
+    {
+      id: `${index}-prep-correct`,
+      label: missing,
+      isCorrect: true,
+      explanation: baseExplanation
+    },
+    ...distractorPrepositions.map<ExerciseOption>((choice, choiceIndex) => ({
+      id: `${index}-prep-${choiceIndex}`,
+      label: choice,
+      isCorrect: false,
+      explanation: baseExplanation
+    }))
+  ]);
+
+  return {
+    id: `story-preposition-${index}`,
+    type: 'preposition',
+    danishSentence: danish,
+    prompt:
+      audienceLanguage === 'chinese'
+        ? '请选择正确的介词：'
+        : 'Select the correct preposition:',
+    body: clozeSentence,
+    options,
+    difficultyScore: sentenceTokens(danish).length + 4
+  };
+}
+
+function buildOrderQuestion(
+  danish: string,
+  english: string,
+  index: number,
+  audienceLanguage: AudienceLanguage
+): StoryExerciseQuestion | null {
+  const tokens = sentenceTokens(danish);
+  if (tokens.length < 4) {
+    return null;
+  }
+
+  const shuffled = shuffleArray(tokens).slice(0, Math.min(6, tokens.length));
+  if (shuffled.join(' ') === tokens.slice(0, shuffled.length).join(' ')) {
+    shuffled.reverse();
+  }
+
+  const prompt =
+    audienceLanguage === 'chinese'
+      ? '请点击以下单词，按正确顺序组成丹麦语句子：'
+      : 'Click the words with the correct order to rebuild the Danish sentence:';
+
+  const explanation =
+    audienceLanguage === 'chinese'
+      ? `正确句子：“${danish}”。意思是 “${english}”。`
+      : `Correct sentence: “${danish}”. It means “${english}”.`;
+
+  const optionLabel =
+    audienceLanguage === 'chinese'
+      ? '提示：选择正确的意思即可（顺序练习即将推出）。'
+      : 'Tip: choose the correct meaning (ordering mode coming soon).';
+
+  return {
+    id: `story-order-${index}`,
+    type: 'order',
+    danishSentence: danish,
+    prompt,
+    body: shuffled.join(' / '),
+    options: [
+      {
+        id: `${index}-order-correct`,
+        label: english,
+        isCorrect: true,
+        explanation
+      },
+      {
+        id: `${index}-order-tip`,
+        label: optionLabel,
+        isCorrect: false,
+        explanation
+      }
+    ],
+    difficultyScore: tokens.length + 5
+  };
+}
+
 function generateStoryQuestions(
   danishSentences: string[],
   englishSentences: string[],
@@ -55,62 +281,62 @@ function generateStoryQuestions(
     return [];
   }
 
-  return paired.map((item, index) => {
-    const distractors = paired
-      .filter((other, otherIndex) => otherIndex !== index)
-      .map((other) => other.english);
+  const translationQuestions: StoryExerciseQuestion[] = [];
+  const clozeQuestions: StoryExerciseQuestion[] = [];
+  const prepositionQuestions: StoryExerciseQuestion[] = [];
+  const orderQuestions: StoryExerciseQuestion[] = [];
 
-    const shuffledDistractors = [...distractors];
-    for (let i = shuffledDistractors.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffledDistractors[i], shuffledDistractors[j]] = [shuffledDistractors[j], shuffledDistractors[i]];
+  paired.forEach((item, index) => {
+    const translationDistractors = pickRandom(
+      paired
+        .filter((other) => other.english !== item.english)
+        .map((other) => other.english),
+      3
+    );
+    translationQuestions.push(
+      buildTranslationQuestion(item.danish, item.english, translationDistractors, index, audienceLanguage)
+    );
+
+    const clozeDistractors = pickRandom(
+      paired
+        .filter((other) => other.english !== item.english)
+        .flatMap((other) => sentenceTokens(other.danish)),
+      3
+    );
+    const clozeQuestion = buildClozeQuestion(item.danish, item.english, clozeDistractors, index, audienceLanguage);
+    if (clozeQuestion) {
+      clozeQuestions.push(clozeQuestion);
     }
 
-    const requiredDistractors = Math.min(3, Math.max(0, shuffledDistractors.length));
-    const optionsPool = shuffledDistractors.slice(0, requiredDistractors);
-
-    const baseExplanation =
-      audienceLanguage === 'chinese'
-        ? `这句话的意思是：“${item.english}”。`
-        : `This sentence means: “${item.english}”.`;
-
-    const options = [
-      {
-        id: `${index}-option-correct`,
-        label: item.english,
-        isCorrect: true,
-        explanation: baseExplanation
-      },
-      ...optionsPool.map((choice, choiceIndex) => ({
-        id: `${index}-option-${choiceIndex}`,
-        label: choice,
-        isCorrect: false,
-        explanation: baseExplanation
-      }))
-    ];
-
-    // Shuffle options
-    const shuffledOptions = [...options];
-    for (let i = shuffledOptions.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
+    const prepositionDistractors = pickRandom(
+      commonPrepositions.filter((prep) => !item.danish.toLowerCase().includes(prep)),
+      3
+    );
+    const prepositionQuestion = buildPrepositionQuestion(
+      item.danish,
+      item.english,
+      prepositionDistractors,
+      index,
+      audienceLanguage
+    );
+    if (prepositionQuestion) {
+      prepositionQuestions.push(prepositionQuestion);
     }
 
-    const prompt =
-      audienceLanguage === 'chinese'
-        ? `“${item.danish}” 的正确意思是什么？`
-        : `What is the correct meaning of “${item.danish}”?`;
-
-    const difficultyScore = item.danish.split(/\s+/).length;
-
-    return {
-      id: `story-question-${index}`,
-      danishSentence: item.danish,
-      prompt,
-      options: shuffledOptions,
-      difficultyScore
-    };
+    const orderQuestion = buildOrderQuestion(item.danish, item.english, index, audienceLanguage);
+    if (orderQuestion) {
+      orderQuestions.push(orderQuestion);
+    }
   });
+
+  const combined = [
+    ...translationQuestions,
+    ...clozeQuestions,
+    ...prepositionQuestions,
+    ...orderQuestions
+  ];
+
+  return combined.sort((a, b) => a.difficultyScore - b.difficultyScore);
 }
 
 function prepareQuestionBatches(
@@ -118,8 +344,7 @@ function prepareQuestionBatches(
   englishSentences: string[],
   audienceLanguage: AudienceLanguage
 ): StoryExerciseQuestionState[][] {
-  const questions = generateStoryQuestions(danishSentences, englishSentences, audienceLanguage)
-    .sort((a, b) => a.difficultyScore - b.difficultyScore);
+  const questions = generateStoryQuestions(danishSentences, englishSentences, audienceLanguage);
 
   const batches: StoryExerciseQuestionState[][] = [];
   for (let i = 0; i < questions.length; i += QUESTIONS_PER_TEST) {
@@ -206,13 +431,12 @@ const StoryExercise: React.FC<StoryExerciseProps> = ({
             return question;
           }
 
+          const successPrefix = audienceLanguage === 'chinese' ? '✅ 正确！' : '✅ Correct!';
+          const retryPrefix = audienceLanguage === 'chinese' ? '❌ 再试一次：' : '❌ Try again: ';
+
           const feedback = selectedOption.isCorrect
-            ? audienceLanguage === 'chinese'
-              ? `✅ 正确！${selectedOption.explanation}`
-              : `✅ Correct! ${selectedOption.explanation}`
-            : audienceLanguage === 'chinese'
-            ? `❌ 再试一次：${selectedOption.explanation}`
-            : `❌ Try again: ${selectedOption.explanation}`;
+            ? `${successPrefix} ${selectedOption.explanation}`
+            : `${retryPrefix}${selectedOption.explanation}`;
 
           const updatedOptions = question.options.map((option) => {
             if (option.id === optionId) {
@@ -404,6 +628,9 @@ const StoryExercise: React.FC<StoryExerciseProps> = ({
       <div className="exercise-content inline">
         <div className="exercise-question">
           <p className="exercise-question-prompt">{currentQuestion.prompt}</p>
+          {currentQuestion.body && (
+            <blockquote className="exercise-question-body">{currentQuestion.body}</blockquote>
+          )}
         </div>
 
         <div className="exercise-options">
