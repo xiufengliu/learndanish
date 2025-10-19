@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Story, StoryExplanation } from '../types/story';
 import { generateStoryExplanation } from '../utils/storyGenerator';
+import StoryExercise from './StoryExercise';
 
 interface StoryViewProps {
   story: Story;
@@ -237,9 +238,15 @@ const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose 
                 <p>💡 Click any Danish sentence to see its English translation in a popup!</p>
                 <p>📚 Click the 💡 light bulb in the popup to get detailed grammar explanations!</p>
               </div>
-            </div>
           </div>
-        
+
+          <StoryExercise
+            danishSentences={danishSentences}
+            englishSentences={englishSentences}
+            audienceLanguage={audienceLanguage}
+          />
+        </div>
+      
         {tooltip.visible && (
           <div 
             className="tooltip draggable-tooltip story-tooltip" 
