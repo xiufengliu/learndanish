@@ -92,10 +92,16 @@ export async function generateStory(
   audienceLanguage: 'english' | 'chinese' = 'english'
 ): Promise<Story> {
   const difficultyDescriptions = {
-    beginner: 'very simple vocabulary and basic sentence structures (present tense, simple past)',
-    intermediate: 'moderate vocabulary with some compound sentences and various tenses',
-    advanced: 'complex vocabulary with sophisticated grammar structures and idiomatic expressions'
-  };
+    beginner: `Align with the goals of PD1 (Prøve i Dansk 1). Use simple present-tense sentences, signage-level vocabulary, and everyday routines such as shopping, transportation, family life, or appointments. Assume the reader is new to Latin script and highlight clear, concrete actions and observable details.`,
+    intermediate: `Match PD2 (Prøve i Dansk 2, CEFR B1). Use connected discourse about community life, work, civic participation, or practical problem-solving. Include a mix of past and future tenses, modal verbs, short subordinate clauses, and realistic communication tasks (e.g., writing a short email, arranging services).`,
+    advanced: `Aim for PD3 / Studieprøven level (upper B2 to C1). Deliver a longer narrative or analytical piece that could appear in a feature article, academic preparation text, or professional briefing. Incorporate abstract reflections, cause-and-effect reasoning, nuanced vocabulary (including idioms), and at least one short quote or reported speech segment.`
+  } as const;
+
+  const difficultyTopics = {
+    beginner: 'Pick a setting such as grocery shopping, visiting a doctor, taking the bus, or meeting a neighbour. Keep the tone friendly and supportive.',
+    intermediate: 'Choose a scenario like volunteering in the community, navigating municipal services, balancing work and family, or handling a complex customer-service situation.',
+    advanced: 'Select a theme suited to academic or professional discussion—for example sustainability policy, cultural debates, healthcare innovation, workplace leadership, or university life.'
+  } as const;
 
   const translationLanguage = audienceLanguage === 'chinese' ? 'Simplified Chinese (简体中文)' : 'English';
   const translationField = audienceLanguage === 'chinese' ? 'chineseTranslation' : 'englishTranslation';
@@ -103,7 +109,8 @@ export async function generateStory(
   const prompt = `You are an expert Danish language teacher. Create a short Danish story and ten follow-up exercises. Follow these requirements:
 
 Story requirements:
-- Difficulty: ${difficultyDescriptions[difficultyLevel]}.
+- Difficulty guidance: ${difficultyDescriptions[difficultyLevel]}
+- Scenario inspiration: ${difficultyTopics[difficultyLevel]}
 - Length: 5-7 sentences.
 - Include engaging content and, when natural, a cultural touch.
 - Provide the full translation in ${translationLanguage}, aligning sentence-by-sentence with the Danish text.
