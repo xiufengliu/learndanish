@@ -242,6 +242,7 @@ const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose 
             danishSentences={danishSentences}
             englishSentences={englishSentences}
             audienceLanguage={audienceLanguage}
+            exercises={story.exercises}
           />
         </div>
       

@@ -1,3 +1,5 @@
+import type { ExerciseQuestion } from './exercise';
+
 export interface Story {
   id: string;
   danishText: string;
@@ -5,6 +7,7 @@ export interface Story {
   difficultyLevel: 'beginner' | 'intermediate' | 'advanced';
   timestamp: Date;
   explanation?: StoryExplanation[];
+  exercises?: ExerciseQuestion[];
 }
 
 export interface StoryExplanation {
