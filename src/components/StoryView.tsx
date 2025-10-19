@@ -15,18 +15,18 @@ const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose 
   const [error, setError] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0, isExplanation: false });
   const [isDraggingTooltip, setIsDraggingTooltip] = useState(false);
-  const [lastClickedSentence, setLastClickedSentence] = useState<string>('');
+  const [lastClickedParagraph, setLastClickedParagraph] = useState<string>('');
   const tooltipDragOffsetRef = useRef({ x: 0, y: 0 });
 
   const handleGenerateExplanation = async () => {
-    if (!lastClickedSentence) {
+    if (!lastClickedParagraph) {
       alert('Please click on a Danish sentence first to get grammar explanation.');
       return;
     }
-    
+
     setIsLoadingExplanation(true);
     try {
-      const explanationData = await generateStoryExplanation(lastClickedSentence, audienceLanguage);
+      const explanationData = await generateStoryExplanation(lastClickedParagraph, audienceLanguage);
       
       // Format explanation as readable text for the tooltip
       let explanationText = '';
@@ -61,21 +61,18 @@ const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose 
     }
   };
 
-  const handleSentenceClick = (e: React.MouseEvent, index: number) => {
-    const danishSentences = story.danishText.split('\n').filter(s => s.trim());
-    const englishSentences = story.englishTranslation.split('\n').filter(s => s.trim());
-    
-    const clickedSentence = danishSentences[index] || '';
-    const translation = englishSentences[index] || 'Translation not available';
-    
-    // Store the clicked sentence for later explanation
-    setLastClickedSentence(clickedSentence);
+  const handleParagraphClick = (e: React.MouseEvent, index: number) => {
+    const clickedParagraph = danishParagraphs[index] || '';
+    const translationParagraph = englishParagraphs[index] || 'Translation not available';
+
+    // Store for explanation
+    setLastClickedParagraph(clickedParagraph);
     
     const x = e.clientX + 15;
     const y = e.clientY + 15;
     
     // Add light bulb emoji at the beginning
-    setTooltip({ visible: true, text: translation, x, y, isExplanation: false });
+    setTooltip({ visible: true, text: translationParagraph, x, y, isExplanation: false });
   };
 
   const handleTooltipMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -190,9 +187,15 @@ const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose 
     }
   };
 
-  const danishSentences = story.danishText.split('\n').filter(s => s.trim());
-  const englishSentences = story.englishTranslation.split('\n').filter(s => s.trim());
-  const danishStoryText = useMemo(() => danishSentences.join(' '), [danishSentences]);
+  const danishParagraphs = useMemo(
+    () => story.danishText.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean),
+    [story.danishText]
+  );
+  const englishParagraphs = useMemo(
+    () => story.englishTranslation.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean),
+    [story.englishTranslation]
+  );
+  const danishStoryText = useMemo(() => danishParagraphs.join(' '), [danishParagraphs]);
   const [isPlayingStory, setIsPlayingStory] = useState(false);
 
   return (
@@ -241,28 +244,36 @@ const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose 
                   </button>
                 </div>
                 <div className="story-text danish-text">
-                  {danishSentences.map((sentence, idx) => (
-                    <p 
-                      key={idx} 
-                      className="clickable-sentence"
-                      onClick={(e) => handleSentenceClick(e, idx)}
+                  {danishParagraphs.map((paragraph, idx) => {
+                    const lines = paragraph.split('\n');
+                    return (
+                    <p
+                      key={idx}
+                      className="clickable-sentence story-paragraph"
+                      onClick={(e) => handleParagraphClick(e, idx)}
                       title="Click to see English translation"
                     >
-                      {sentence}
+                      {lines.map((line, lineIdx) => (
+                        <React.Fragment key={lineIdx}>
+                          {line}
+                          {lineIdx < lines.length - 1 && <br />}
+                        </React.Fragment>
+                      ))}
                     </p>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
               <div className="story-hint">
-                <p>💡 Click any Danish sentence to see its English translation in a popup!</p>
-                <p>📚 Click the 💡 light bulb in the popup to get detailed grammar explanations!</p>
+                <p>💡 Click any Danish paragraph to see its English translation in a popup!</p>
+                <p>📚 Use the explanation button in the popup to request grammar details.</p>
               </div>
           </div>
 
           <StoryExercise
-            danishSentences={danishSentences}
-            englishSentences={englishSentences}
+            danishSentences={danishParagraphs}
+            englishSentences={englishParagraphs}
             audienceLanguage={audienceLanguage}
             exercises={story.exercises}
           />
@@ -288,11 +299,18 @@ const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose 
                 tooltip.text
               ) : (
                 <>
-                  <div className="tooltip-translation">{tooltip.text}</div>
+                  <div className="tooltip-translation">
+                    {tooltip.text.split('\n').map((line, idx, arr) => (
+                      <React.Fragment key={idx}>
+                        {line}
+                        {idx < arr.length - 1 && <br />}
+                      </React.Fragment>
+                    ))}
+                  </div>
                   <button
                     className="tooltip-explain-button"
                     onClick={handleGenerateExplanation}
-                    disabled={!lastClickedSentence || isLoadingExplanation}
+                    disabled={!lastClickedParagraph || isLoadingExplanation}
                   >
                     {audienceLanguage === 'chinese' ? '查看语法说明' : 'Show grammar explanation'}
                   </button>
