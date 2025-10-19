@@ -61,7 +61,7 @@ async function requestSpeechFromGemini(text: string): Promise<CachedSpeech> {
     client.models.generateContent({
       model: MODEL_ID,
       contents: [{ parts: [{ text }] }],
-      generationConfig: {
+      config: {
         responseModalities: ['AUDIO'],
         speechConfig: {
           voiceConfig: {
