@@ -203,7 +203,7 @@ const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose 
       <div className="story-panel" onClick={(e) => e.stopPropagation()}>
         <div className="story-header">
           <div className="story-header-left">
-            <h2>📖 Danish Story</h2>
+            <h2>📖 Reading</h2>
             <span className="difficulty-badge" style={{ 
               backgroundColor: story.difficultyLevel === 'beginner' ? '#81c995' : 
                               story.difficultyLevel === 'intermediate' ? '#fdd663' : '#f28b82' 
@@ -228,7 +228,7 @@ const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose 
           <div className="story-text-container">
             <div className="story-section">
                 <div className="story-title">
-                  <h3>🇩🇰 Danish Story</h3>
+                  <h3>🇩🇰 Reading</h3>
                   <button
                     className="story-speak-button"
                     onClick={() => {
