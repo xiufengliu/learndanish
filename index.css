@@ -2604,6 +2604,22 @@ button:disabled {
   font-size: 0.95rem;
 }
 
+.story-close-button {
+  color: #d93025;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.story-close-button:hover {
+  background-color: rgba(217, 48, 37, 0.12);
+}
+
+.story-close-button span {
+  display: inline-block;
+  transform: translateY(-1px);
+}
+
 .story-exercise-section {
   margin-top: 2rem;
   background-color: var(--container-background);
