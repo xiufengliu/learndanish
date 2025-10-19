@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 type AudienceLanguage = 'english' | 'chinese';
 
-type QuestionType = 'translation' | 'cloze' | 'preposition' | 'order';
+type QuestionType = 'translation' | 'cloze' | 'preposition' | 'order' | 'comprehension';
 type OptionStatus = 'idle' | 'correct' | 'incorrect';
 
 interface ExerciseOption {
@@ -329,11 +329,84 @@ function generateStoryQuestions(
     }
   });
 
+  const comprehensionQuestions: StoryExerciseQuestion[] = [];
+
+  if (paired.length >= 3) {
+    const createSequenceQuestion = (
+      mode: 'earliest' | 'latest',
+      questionIndex: number
+    ): StoryExerciseQuestion | null => {
+      const optionCount = Math.min(4, paired.length);
+      const optionIndices = pickRandom(
+        Array.from({ length: paired.length }, (_, idx) => idx),
+        optionCount
+      );
+
+      if (optionIndices.length < 2) {
+        return null;
+      }
+
+      const targetIndex =
+        mode === 'earliest'
+          ? optionIndices.reduce((acc, value) => (value < acc ? value : acc), optionIndices[0])
+          : optionIndices.reduce((acc, value) => (value > acc ? value : acc), optionIndices[0]);
+
+      const prompt =
+        audienceLanguage === 'chinese'
+          ? mode === 'earliest'
+            ? '以下哪件事情在故事中最先发生？'
+            : '以下哪件事情在故事中最晚发生？'
+          : mode === 'earliest'
+          ? 'Which of these events happens first in the story?'
+          : 'Which of these events happens last in the story?';
+
+      const options = optionIndices.map<ExerciseOption>((idx, optIdx) => {
+        const isCorrect = idx === targetIndex;
+        const position = idx + 1;
+        const explanation =
+          audienceLanguage === 'chinese'
+            ? isCorrect
+              ? `该事件出现在第 ${position} 句，是选项中最${mode === 'earliest' ? '早' : '晚'}发生的。`
+              : `该事件出现在第 ${position} 句，比正确答案发生得${mode === 'earliest' ? '晚' : '早'}。`
+            : isCorrect
+            ? `This event appears in sentence ${position}, making it the ${mode === 'earliest' ? 'earliest' : 'latest'} among the options.`
+            : `This event appears in sentence ${position}, so it happens ${mode === 'earliest' ? 'later' : 'earlier'} than the correct answer.`;
+
+        return {
+          id: `${questionIndex}-comp-${mode}-${optIdx}`,
+          label: paired[idx].english,
+          isCorrect,
+          explanation
+        };
+      });
+
+      return {
+        id: `story-comprehension-${mode}-${questionIndex}`,
+        type: 'comprehension',
+        danishSentence: paired[targetIndex].danish,
+        prompt,
+        options: shuffleArray(options),
+        difficultyScore: paired[targetIndex].danish.split(/\s+/).length + 6
+      };
+    };
+
+    const earliestQuestion = createSequenceQuestion('earliest', 0);
+    if (earliestQuestion) {
+      comprehensionQuestions.push(earliestQuestion);
+    }
+
+    const latestQuestion = createSequenceQuestion('latest', 1);
+    if (latestQuestion) {
+      comprehensionQuestions.push(latestQuestion);
+    }
+  }
+
   const combined = [
     ...translationQuestions,
     ...clozeQuestions,
     ...prepositionQuestions,
-    ...orderQuestions
+    ...orderQuestions,
+    ...comprehensionQuestions
   ];
 
   return combined.sort((a, b) => a.difficultyScore - b.difficultyScore);
@@ -358,6 +431,26 @@ function prepareQuestionBatches(
     batches.push(batch);
   }
   return batches;
+}
+
+function localizeStoryQuestionType(type: QuestionType, audienceLanguage: AudienceLanguage): string {
+  const mapping =
+    audienceLanguage === 'chinese'
+      ? {
+          translation: '翻译理解',
+          cloze: '完形填空',
+          preposition: '介词用法',
+          order: '语序提示',
+          comprehension: '阅读理解'
+        }
+      : {
+          translation: 'Translation',
+          cloze: 'Cloze',
+          preposition: 'Prepositions',
+          order: 'Word order',
+          comprehension: 'Comprehension'
+        };
+  return mapping[type];
 }
 
 const StoryExercise: React.FC<StoryExerciseProps> = ({
@@ -627,6 +720,9 @@ const StoryExercise: React.FC<StoryExerciseProps> = ({
 
       <div className="exercise-content inline">
         <div className="exercise-question">
+          <span className="story-exercise-type-chip">
+            {localizeStoryQuestionType(currentQuestion.type, audienceLanguage)}
+          </span>
           <p className="exercise-question-prompt">{currentQuestion.prompt}</p>
           {currentQuestion.body && (
             <blockquote className="exercise-question-body">{currentQuestion.body}</blockquote>

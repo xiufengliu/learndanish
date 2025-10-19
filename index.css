@@ -2662,6 +2662,19 @@ button:disabled {
   color: var(--primary-color);
 }
 
+.story-exercise-type-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--primary-color);
+  background-color: rgba(102, 126, 234, 0.15);
+  margin-bottom: 0.75rem;
+}
+
 .story-exercise-quote {
   margin: 0;
   font-style: italic;
