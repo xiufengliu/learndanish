@@ -286,16 +286,22 @@ function generateStoryQuestions(
   const prepositionQuestions: StoryExerciseQuestion[] = [];
   const orderQuestions: StoryExerciseQuestion[] = [];
 
+  const maxTranslationQuestions = Math.max(1, Math.ceil(paired.length / 4));
+  let translationCreated = 0;
+
   paired.forEach((item, index) => {
-    const translationDistractors = pickRandom(
-      paired
-        .filter((other) => other.english !== item.english)
-        .map((other) => other.english),
-      3
-    );
-    translationQuestions.push(
-      buildTranslationQuestion(item.danish, item.english, translationDistractors, index, audienceLanguage)
-    );
+    if (translationCreated < maxTranslationQuestions) {
+      const translationDistractors = pickRandom(
+        paired
+          .filter((other) => other.english !== item.english)
+          .map((other) => other.english),
+        3
+      );
+      translationQuestions.push(
+        buildTranslationQuestion(item.danish, item.english, translationDistractors, index, audienceLanguage)
+      );
+      translationCreated += 1;
+    }
 
     const clozeDistractors = pickRandom(
       paired
@@ -399,6 +405,65 @@ function generateStoryQuestions(
     if (latestQuestion) {
       comprehensionQuestions.push(latestQuestion);
     }
+  }
+
+  const createTrueStatementQuestion = (questionIndex: number): StoryExerciseQuestion | null => {
+    if (paired.length === 0) {
+      return null;
+    }
+
+    const correctIdx = questionIndex % paired.length;
+    const correctSentence = paired[correctIdx].english;
+
+    const distractorSources = pickRandom(
+      paired
+        .map((item) => item.english)
+        .filter((sentence) => sentence !== correctSentence),
+      3
+    );
+
+    const buildNegativeStatement = (sentence: string): string =>
+      audienceLanguage === 'chinese'
+        ? `故事中并没有提到：“${sentence}”。`
+        : `It is not true that ${sentence}.`;
+
+    const options: ExerciseOption[] = [
+      {
+        id: `${questionIndex}-comp-true-correct`,
+        label: correctSentence,
+        isCorrect: true,
+        explanation:
+          audienceLanguage === 'chinese'
+            ? '这句话确实出现在故事中。'
+            : 'This statement appears in the story.'
+      },
+      ...distractorSources.map<ExerciseOption>((sentence, idx) => ({
+        id: `${questionIndex}-comp-true-${idx}`,
+        label: buildNegativeStatement(sentence),
+        isCorrect: false,
+        explanation:
+          audienceLanguage === 'chinese'
+            ? `原文确实写道：“${sentence}”，因此该否定说法不正确。`
+            : `The story actually states “${sentence}”, so this negative claim is incorrect.`
+      }))
+    ];
+
+    return {
+      id: `story-comprehension-true-${questionIndex}`,
+      type: 'comprehension',
+      danishSentence: paired[correctIdx].danish,
+      prompt:
+        audienceLanguage === 'chinese'
+          ? '以下哪句话与故事描述一致？'
+          : 'Which of these statements matches the story?',
+      options: shuffleArray(options),
+      difficultyScore: paired[correctIdx].danish.split(/\s+/).length + 7
+    };
+  };
+
+  const trueStatementQuestion = createTrueStatementQuestion(2);
+  if (trueStatementQuestion) {
+    comprehensionQuestions.push(trueStatementQuestion);
   }
 
   const combined = [
