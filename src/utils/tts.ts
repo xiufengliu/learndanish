@@ -1,8 +1,9 @@
 import { withGenAIClient } from './genAIClient';
 
-const MODEL_ID = 'gemini-2.5-pro-preview-tts';
+const MODEL_ID = 'gemini-2.5-flash-preview-tts';
 const VOICE_NAME = 'Kore'; // Danish voice
 const FALLBACK_SAMPLE_RATE = 24000;
+
 
 type CachedSpeech = {
   base64: string;
