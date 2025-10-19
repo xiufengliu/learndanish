@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { generateAIStoryExercises, AIStoryExercise } from '../utils/storyExercisesGenerator';
 
 type AudienceLanguage = 'english' | 'chinese';
 
@@ -479,15 +480,13 @@ function generateStoryQuestions(
   return combined.sort((a, b) => a.difficultyScore - b.difficultyScore);
 }
 
-function prepareQuestionBatches(
-  danishSentences: string[],
-  englishSentences: string[],
-  audienceLanguage: AudienceLanguage
-): StoryExerciseQuestionState[][] {
-  const questions = generateStoryQuestions(danishSentences, englishSentences, audienceLanguage);
-
-  const comprehensionPool = questions.filter((question) => question.type === 'comprehension');
-  const otherPool = questions.filter((question) => question.type !== 'comprehension');
+function createBatchesFromQuestions(questions: StoryExerciseQuestion[]): StoryExerciseQuestionState[][] {
+  const comprehensionPool = questions
+    .filter((question) => question.type === 'comprehension')
+    .map(question => ({ ...question }));
+  const otherPool = questions
+    .filter((question) => question.type !== 'comprehension')
+    .map(question => ({ ...question }));
 
   const totalQuestions = comprehensionPool.length + otherPool.length;
   if (totalQuestions === 0) {
@@ -559,6 +558,48 @@ function prepareQuestionBatches(
   return batches;
 }
 
+function prepareQuestionBatches(
+  danishSentences: string[],
+  englishSentences: string[],
+  audienceLanguage: AudienceLanguage
+): StoryExerciseQuestionState[][] {
+  const questions = generateStoryQuestions(danishSentences, englishSentences, audienceLanguage);
+  return createBatchesFromQuestions(questions);
+}
+
+function normalizeAIExercise(question: AIStoryExercise, fallbackId: string): StoryExerciseQuestion | null {
+  if (!question.prompt || !question.options || question.options.length !== 4) {
+    return null;
+  }
+
+  const options = question.options.map((option, index) => ({
+    id: `${question.id ?? fallbackId}-opt-${index + 1}`,
+    label: option.label,
+    isCorrect: Boolean(option.isCorrect),
+    explanation: option.explanation
+  }));
+
+  const correctCount = options.filter(option => option.isCorrect).length;
+  if (correctCount !== 1) {
+    return null;
+  }
+
+  const danishSentence = question.danishContext ?? '';
+  const baseDifficulty = danishSentence ? sentenceTokens(danishSentence).length : 1;
+
+  const mappedType: QuestionType = question.type;
+
+  return {
+    id: question.id ?? fallbackId,
+    type: mappedType,
+    danishSentence,
+    prompt: question.prompt,
+    body: question.body,
+    options,
+    difficultyScore: question.difficulty ?? baseDifficulty
+  };
+}
+
 function localizeStoryQuestionType(type: QuestionType, audienceLanguage: AudienceLanguage): string {
   const mapping =
     audienceLanguage === 'chinese'
@@ -582,25 +623,109 @@ const StoryExercise: React.FC<StoryExerciseProps> = ({
   englishSentences,
   audienceLanguage
 }) => {
-  const [questionBatches, setQuestionBatches] = useState<StoryExerciseQuestionState[][]>(() =>
-    prepareQuestionBatches(danishSentences, englishSentences, audienceLanguage)
-  );
+  const [questionBatches, setQuestionBatches] = useState<StoryExerciseQuestionState[][]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [currentBatchIndex, setCurrentBatchIndex] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
 
+  const danishKey = useMemo(() => danishSentences.join('\n'), [danishSentences]);
+  const englishKey = useMemo(() => englishSentences.join('\n'), [englishSentences]);
+
   useEffect(() => {
-    const prepared = prepareQuestionBatches(danishSentences, englishSentences, audienceLanguage);
-    setQuestionBatches(prepared);
-    setCurrentBatchIndex(0);
-    setCurrentIndex(0);
-    setShowSummary(false);
-  }, [danishSentences, englishSentences, audienceLanguage]);
+    let cancelled = false;
+
+    const loadExercises = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+
+      try {
+        const aiExercises = await generateAIStoryExercises(danishSentences, englishSentences, audienceLanguage);
+
+        if (cancelled) {
+          return;
+        }
+
+        const normalized = aiExercises
+          .map((exercise, index) => normalizeAIExercise(exercise, `ai-fallback-${index + 1}`))
+          .filter((exercise): exercise is StoryExerciseQuestion => exercise !== null);
+
+        const comprehensionCount = normalized.filter(question => question.type === 'comprehension').length;
+
+        if (normalized.length < QUESTIONS_PER_TEST || comprehensionCount < MIN_COMPREHENSION_PER_TEST) {
+          throw new Error('AI response did not provide enough comprehension questions. Using fallback exercises.');
+        }
+
+        const batches = createBatchesFromQuestions(normalized);
+
+        if (batches.length === 0) {
+          throw new Error('AI response could not be converted into practice questions.');
+        }
+
+        setQuestionBatches(batches);
+        setCurrentBatchIndex(0);
+        setCurrentIndex(0);
+        setShowSummary(false);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        console.error('Failed to generate AI story exercises:', error);
+        setLoadError(
+          audienceLanguage === 'chinese'
+            ? '⚠️ 无法从 AI 获取练习题，已切换为备用题目。'
+            : '⚠️ Unable to fetch AI-generated exercises. Showing fallback questions instead.'
+        );
+
+        const fallback = prepareQuestionBatches(danishSentences, englishSentences, audienceLanguage);
+        setQuestionBatches(fallback);
+        setCurrentBatchIndex(0);
+        setCurrentIndex(0);
+        setShowSummary(false);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadExercises();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [audienceLanguage, danishKey, englishKey]);
 
   const currentBatch = questionBatches[currentBatchIndex] ?? [];
   const currentQuestion = currentBatch[currentIndex];
   const totalBatches = questionBatches.length;
   const isLastBatch = currentBatchIndex >= totalBatches - 1;
+
+  if (isLoading) {
+    return (
+      <div className="story-exercise-section story-exercise-loading">
+        <p>
+          {audienceLanguage === 'chinese'
+            ? '正在为这个故事生成个性化练习题...'
+            : 'Generating personalized exercises for this story...'}
+        </p>
+      </div>
+    );
+  }
+
+  if (questionBatches.length === 0) {
+    return (
+      <div className="story-exercise-section story-exercise-loading">
+        <p>
+          {audienceLanguage === 'chinese'
+            ? '暂时没有可用的练习题。'
+            : 'No exercises are available for this story right now.'}
+        </p>
+      </div>
+    );
+  }
 
   const stats = useMemo(() => {
     const batch = currentBatch;
@@ -841,6 +966,10 @@ const StoryExercise: React.FC<StoryExerciseProps> = ({
           <q className="story-exercise-quote">{currentQuestion.danishSentence}</q>
         </div>
       </div>
+
+      {loadError && (
+        <div className="story-exercise-warning">{loadError}</div>
+      )}
 
       <div className="exercise-content inline">
         <div className="exercise-question">
