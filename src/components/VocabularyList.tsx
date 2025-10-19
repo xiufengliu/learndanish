@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { VocabularyWord } from '../types/vocabulary';
 import { generateExampleSentences, generateCulturalNote, generateGrammaticalForms } from '../utils/exampleGenerator';
+import { playDanishText } from '../utils/tts';
 
 interface VocabularyListProps {
   vocabulary: VocabularyWord[];
@@ -11,17 +12,6 @@ interface VocabularyListProps {
   onClearAll?: () => void;
 }
 
-const speakText = (text: string, lang: string = 'da-DK') => {
-  // Use browser's built-in TTS which has good Danish support
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang;
-    utterance.rate = 0.9;
-    utterance.pitch = 1.0;
-    window.speechSynthesis.speak(utterance);
-  }
-};
 
 type SortBy = 'recent' | 'alphabetical' | 'proficiency';
 type FilterBy = 'all' | 'unmastered' | 'mastered';
@@ -218,7 +208,7 @@ const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, audienceLan
                       <h3>{word.danishWord}</h3>
                       <button
                         className="vocab-speaker-button"
-                        onClick={() => speakText(word.danishWord, 'da-DK')}
+                      onClick={() => void playDanishText(word.danishWord)}
                         aria-label="Pronounce Danish word"
                         title="Hear pronunciation"
                       >
@@ -242,7 +232,7 @@ const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, audienceLan
                     <p className="vocabulary-context">"{word.context}"</p>
                     <button
                       className="vocab-speaker-button context-speaker"
-                      onClick={() => speakText(word.context, 'da-DK')}
+                      onClick={() => void playDanishText(word.context)}
                       aria-label="Read example sentence"
                       title="Hear example sentence"
                     >
@@ -379,7 +369,7 @@ const VocabularyList: React.FC<VocabularyListProps> = ({ vocabulary, audienceLan
                                   <button
                                     className="vocab-speaker-button-small"
                                     onClick={() => {
-                                      speakText(danishPart ?? sentence, 'da-DK');
+                    void playDanishText(danishPart ?? sentence);
                                     }}
                                     aria-label="Hear sentence"
                                   >
