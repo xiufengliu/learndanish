@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import type { Story, StoryExplanation } from '../types/story';
+import type { Story } from '../types/story';
 import { generateStoryExplanation } from '../utils/storyGenerator';
 import StoryExercise from './StoryExercise';
 import { playDanishText } from '../utils/tts';
@@ -11,8 +11,6 @@ interface StoryViewProps {
 }
 
 const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose }) => {
-  const [showExplanation, setShowExplanation] = useState(false);
-  const [explanation, setExplanation] = useState<StoryExplanation[] | null>(null);
   const [isLoadingExplanation, setIsLoadingExplanation] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0, isExplanation: false });
@@ -47,14 +45,14 @@ const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose 
         });
       });
       
-      setTooltip(current => ({ 
-        ...current, 
-        text: explanationText, 
-        isExplanation: true 
+      setTooltip(current => ({
+        ...current,
+        text: explanationText,
+        isExplanation: true
       }));
     } catch (err) {
-      setTooltip(current => ({ 
-        ...current, 
+      setTooltip(current => ({
+        ...current,
         text: `${audienceLanguage === 'chinese' ? '错误' : 'Error'}: ${err instanceof Error ? err.message : 'Failed to generate explanation'}`,
         isExplanation: false
       }));
@@ -77,7 +75,7 @@ const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose 
     const y = e.clientY + 15;
     
     // Add light bulb emoji at the beginning
-    setTooltip({ visible: true, text: `💡 ${translation}`, x, y, isExplanation: false });
+    setTooltip({ visible: true, text: translation, x, y, isExplanation: false });
   };
 
   const handleTooltipMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -85,10 +83,13 @@ const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose 
     if (target.classList.contains('tooltip-close') || target.closest('.tooltip-close')) {
       return;
     }
-    
+    if (target.classList.contains('tooltip-explain-button') || target.closest('.tooltip-explain-button')) {
+      return;
+    }
+
     e.preventDefault();
     e.stopPropagation();
-    
+
     setIsDraggingTooltip(true);
     tooltipDragOffsetRef.current = {
       x: e.clientX - tooltip.x,
@@ -101,9 +102,12 @@ const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose 
     if (target.classList.contains('tooltip-close') || target.closest('.tooltip-close')) {
       return;
     }
-    
+    if (target.classList.contains('tooltip-explain-button') || target.closest('.tooltip-explain-button')) {
+      return;
+    }
+
     e.stopPropagation();
-    
+
     const touch = e.touches[0];
     setIsDraggingTooltip(true);
     tooltipDragOffsetRef.current = {
@@ -205,19 +209,6 @@ const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose 
             </span>
           </div>
           <div className="story-header-actions">
-            <button
-              className="story-speak-button"
-              onClick={() => {
-                setIsPlayingStory(true);
-                void playDanishText(danishStoryText).finally(() => setIsPlayingStory(false));
-              }}
-              aria-label={audienceLanguage === 'chinese' ? '朗读丹麦故事' : 'Play Danish story aloud'}
-              disabled={isPlayingStory}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" aria-hidden="true">
-                <path d="M533.6 32.5C598.5 85.3 640 165.8 640 256s-41.5 170.8-106.4 223.5c-10.3 8.4-25.4 6.8-33.8-3.5s-6.8-25.4 3.5-33.8C557.5 398.2 592 331.2 592 256s-34.5-142.2-88.7-186.3c-10.3-8.4-11.8-23.5-3.5-33.8s23.5-11.8 33.8-3.5zM473.1 107c43.2 35.2 70.9 88.9 70.9 149s-27.7 113.8-70.9 149c-10.3 8.4-25.4 6.8-33.8-3.5s-6.8-25.4 3.5-33.8C475.3 341.3 496 301.1 496 256s-20.7-85.3-53.2-111.8c-10.3-8.4-11.8-23.5-3.5-33.8s23.5-11.8 33.8-3.5zm-60.5 74.5C434.1 199.1 448 225.9 448 256s-13.9 56.9-35.4 74.5c-10.3 8.4-25.4 6.8-33.8-3.5s-6.8-25.4 3.5-33.8C393.1 284.4 400 271 400 256s-6.9-28.4-17.7-37.3c-10.3-8.4-11.8-23.5-3.5-33.8s23.5-11.8 33.8-3.5zM301.1 34.8C312.6 40 320 51.4 320 64V448c0 12.6-7.4 24-18.9 29.2s-25 3.1-34.4-5.3L131.8 352H64c-35.3 0-64-28.7-64-64V224c0-35.3 28.7-64 64-64h67.8L266.7 40.1c9.4-8.4 22.9-10.4 34.4-5.3z" />
-              </svg>
-            </button>
             <button className="close-button story-close-button" onClick={onClose} aria-label="Close story">
               <span aria-hidden="true">×</span>
             </button>
@@ -233,7 +224,22 @@ const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose 
 
           <div className="story-text-container">
             <div className="story-section">
-                <h3>🇩🇰 Danish Story</h3>
+                <div className="story-title">
+                  <h3>🇩🇰 Danish Story</h3>
+                  <button
+                    className="story-speak-button"
+                    onClick={() => {
+                      setIsPlayingStory(true);
+                      void playDanishText(danishStoryText).finally(() => setIsPlayingStory(false));
+                    }}
+                    aria-label={audienceLanguage === 'chinese' ? '朗读丹麦故事' : 'Play Danish story aloud'}
+                    disabled={isPlayingStory}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" aria-hidden="true">
+                      <path d="M533.6 32.5C598.5 85.3 640 165.8 640 256s-41.5 170.8-106.4 223.5c-10.3 8.4-25.4 6.8-33.8-3.5s-6.8-25.4 3.5-33.8C557.5 398.2 592 331.2 592 256s-34.5-142.2-88.7-186.3c-10.3-8.4-11.8-23.5-3.5-33.8s23.5-11.8 33.8-3.5zM473.1 107c43.2 35.2 70.9 88.9 70.9 149s-27.7 113.8-70.9 149c-10.3 8.4-25.4 6.8-33.8-3.5s-6.8-25.4 3.5-33.8C475.3 341.3 496 301.1 496 256s-20.7-85.3-53.2-111.8c-10.3-8.4-11.8-23.5-3.5-33.8s23.5-11.8 33.8-3.5zm-60.5 74.5C434.1 199.1 448 225.9 448 256s-13.9 56.9-35.4 74.5c-10.3 8.4-25.4 6.8-33.8-3.5s-6.8-25.4 3.5-33.8C393.1 284.4 400 271 400 256s-6.9-28.4-17.7-37.3c-10.3-8.4-11.8-23.5-3.5-33.8s23.5-11.8 33.8-3.5zM301.1 34.8C312.6 40 320 51.4 320 64V448c0 12.6-7.4 24-18.9 29.2s-25 3.1-34.4-5.3L131.8 352H64c-35.3 0-64-28.7-64-64V224c0-35.3 28.7-64 64-64h67.8L266.7 40.1c9.4-8.4 22.9-10.4 34.4-5.3z" />
+                    </svg>
+                  </button>
+                </div>
                 <div className="story-text danish-text">
                   {danishSentences.map((sentence, idx) => (
                     <p 
@@ -275,14 +281,27 @@ const StoryView: React.FC<StoryViewProps> = ({ story, audienceLanguage, onClose 
             <div 
               className={`tooltip-content ${tooltip.isExplanation ? 'explanation-mode' : ''}`}
               style={{ whiteSpace: 'pre-wrap' }}
-              onClick={!tooltip.isExplanation && lastClickedSentence ? handleGenerateExplanation : undefined}
-              title={!tooltip.isExplanation ? 'Click the 💡 to see grammar explanation' : ''}
             >
-              {isLoadingExplanation ? '⏳ Loading explanation...' : tooltip.text}
+              {isLoadingExplanation ? (
+                '⏳ Loading explanation...'
+              ) : tooltip.isExplanation ? (
+                tooltip.text
+              ) : (
+                <>
+                  <div className="tooltip-translation">{tooltip.text}</div>
+                  <button
+                    className="tooltip-explain-button"
+                    onClick={handleGenerateExplanation}
+                    disabled={!lastClickedSentence || isLoadingExplanation}
+                  >
+                    {audienceLanguage === 'chinese' ? '查看语法说明' : 'Show grammar explanation'}
+                  </button>
+                </>
+              )}
             </div>
             <div className="tooltip-buttons">
               <button 
-                className="tooltip-close"
+                className="tooltip-close" 
                 onClick={handleTooltipClose}
                 onTouchEnd={handleTooltipClose}
                 aria-label="Close"

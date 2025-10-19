@@ -2590,6 +2590,12 @@ button:disabled {
   gap: 2rem;
 }
 
+.story-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .story-section {
   background-color: var(--background-color);
   border-radius: 12px;
@@ -2638,6 +2644,32 @@ button:disabled {
   margin: 0.5rem 0;
   color: var(--text-secondary);
   font-size: 0.95rem;
+}
+
+.tooltip-translation {
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+  color: var(--text-color);
+}
+
+.tooltip-explain-button {
+  background: var(--primary-color);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 0.85rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.2s ease;
+}
+
+.tooltip-explain-button:hover:not(:disabled) {
+  background: var(--primary-hover-color);
+}
+
+.tooltip-explain-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .story-close-button {
