@@ -120,9 +120,10 @@ Exercise requirements:
 - At least 5 questions must be of type "comprehension" that test story understanding (sequence of events, cause/effect, inference, main idea, etc.).
 - Remaining questions may be "translation", "cloze", or "preposition". Do not invent other types.
 - Every question must have exactly 4 answer options with one correct choice.
-- Provide a short explanation for each option to give feedback.
-- All prompts, option text, and explanations must be in ${translationLanguage}.
-- Include the relevant Danish sentence or excerpt in "danishContext".
+- Provide a short explanation for each option to give feedback (in the same language used for that option).
+- For "translation" questions, write the prompt, answer choices, and explanations in ${translationLanguage} so the learner can choose the correct translation.
+- For "comprehension", "cloze", and "preposition" questions, keep the prompt, answer choices, and explanations entirely in Danish.
+- Always populate "danishContext" with the exact Danish sentence or excerpt from the story that the question is based on.
 - For cloze questions, output the gapped sentence in the "body" field using "_____".
 - Assign a difficulty between 1 and 5 (higher = harder).
 
