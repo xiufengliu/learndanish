@@ -1,53 +1,55 @@
 import { withGenAIClient } from './genAIClient';
 
 const MODEL_ID = 'gemini-2.5-pro-preview-tts';
-const SAMPLE_RATE = 24000;
 const VOICE_NAME = 'Kore'; // Danish voice
+const FALLBACK_SAMPLE_RATE = 24000;
 
 type CachedSpeech = {
-  audio: Float32Array;
-  sampleRate: number;
+  base64: string;
+  mimeType?: string;
 };
 
 const speechCache = new Map<string, Promise<CachedSpeech>>();
 
 let sharedAudioContext: AudioContext | null = null;
 
-function ensureAudioContext(sampleRate: number): AudioContext {
-  if (sharedAudioContext && sharedAudioContext.sampleRate !== sampleRate) {
-    try {
-      sharedAudioContext.close();
-    } catch (error) {
-      console.warn('Failed to close existing AudioContext', error);
-    }
-    sharedAudioContext = null;
+function ensureAudioContext(): AudioContext {
+  if (sharedAudioContext) {
+    return sharedAudioContext;
   }
 
-  if (!sharedAudioContext) {
-    const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
-    sharedAudioContext = new AudioContextCtor({ sampleRate });
-  }
-
+  const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+  sharedAudioContext = new AudioContextCtor();
   return sharedAudioContext;
 }
 
-function decodeBase64ToFloat32(base64Data: string): Float32Array {
+function base64ToArrayBuffer(base64Data: string): ArrayBuffer {
   const binaryString = atob(base64Data);
   const len = binaryString.length;
-  const buffer = new ArrayBuffer(len);
-  const view = new Uint8Array(buffer);
+  const arrayBuffer = new ArrayBuffer(len);
+  const view = new Uint8Array(arrayBuffer);
 
   for (let i = 0; i < len; i += 1) {
     view[i] = binaryString.charCodeAt(i);
   }
 
-  const int16View = new Int16Array(buffer);
+  return arrayBuffer;
+}
+
+function decodePCM16ToAudioBuffer(
+  audioContext: AudioContext,
+  arrayBuffer: ArrayBuffer,
+  sampleRate: number = FALLBACK_SAMPLE_RATE
+): AudioBuffer {
+  const int16View = new Int16Array(arrayBuffer);
   const float32 = new Float32Array(int16View.length);
   for (let i = 0; i < int16View.length; i += 1) {
     float32[i] = int16View[i] / 32768;
   }
 
-  return float32;
+  const buffer = audioContext.createBuffer(1, float32.length, sampleRate);
+  buffer.getChannelData(0).set(float32);
+  return buffer;
 }
 
 async function requestSpeechFromGemini(text: string): Promise<CachedSpeech> {
@@ -59,7 +61,7 @@ async function requestSpeechFromGemini(text: string): Promise<CachedSpeech> {
     client.models.generateContent({
       model: MODEL_ID,
       contents: [{ parts: [{ text }] }],
-      config: {
+      generationConfig: {
         responseModalities: ['AUDIO'],
         speechConfig: {
           voiceConfig: {
@@ -80,10 +82,11 @@ async function requestSpeechFromGemini(text: string): Promise<CachedSpeech> {
     throw new Error('Gemini did not return audio data.');
   }
 
-  const audio = decodeBase64ToFloat32(base64Audio);
+  const mimeType = part?.inlineData?.mimeType;
+
   return {
-    audio,
-    sampleRate: SAMPLE_RATE
+    base64: base64Audio,
+    mimeType
   };
 }
 
@@ -108,18 +111,27 @@ export async function playDanishText(text: string): Promise<void> {
   }
 
   try {
-    const { audio, sampleRate } = await getSpeechAudio(text);
-    const audioContext = ensureAudioContext(sampleRate);
+    const { base64, mimeType } = await getSpeechAudio(text);
+    const audioContext = ensureAudioContext();
 
     if (audioContext.state === 'suspended') {
       await audioContext.resume();
     }
 
-    const buffer = audioContext.createBuffer(1, audio.length, sampleRate);
-    buffer.getChannelData(0).set(audio);
+    const arrayBuffer = base64ToArrayBuffer(base64);
+    let audioBuffer: AudioBuffer;
+
+    try {
+      audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+    } catch (decodeError) {
+      if (mimeType && !mimeType.includes('pcm')) {
+        throw decodeError;
+      }
+      audioBuffer = decodePCM16ToAudioBuffer(audioContext, arrayBuffer);
+    }
 
     const source = audioContext.createBufferSource();
-    source.buffer = buffer;
+    source.buffer = audioBuffer;
     source.connect(audioContext.destination);
     source.start();
   } catch (error) {
