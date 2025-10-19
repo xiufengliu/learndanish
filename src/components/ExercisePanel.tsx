@@ -21,6 +21,7 @@ interface ExerciseQuestion {
   body?: string;
   hint?: string;
   options: ExerciseOption[];
+  difficultyScore: number;
 }
 
 interface ExerciseQuestionState extends ExerciseQuestion {
@@ -39,10 +40,12 @@ interface ExercisePanelProps {
   onClose: () => void;
 }
 
-const MAX_TRANSLATION_QUESTIONS = 5;
-const MAX_GRAMMAR_QUESTIONS = 3;
-const MAX_CLOZE_QUESTIONS = 3;
-const MAX_TOTAL_QUESTIONS = 10;
+const MAX_TRANSLATION_QUESTIONS = 12;
+const MAX_GRAMMAR_QUESTIONS = 9;
+const MAX_CLOZE_QUESTIONS = 9;
+const MAX_TESTS = 3;
+const QUESTIONS_PER_TEST = 10;
+const MAX_TOTAL_QUESTIONS = QUESTIONS_PER_TEST * MAX_TESTS;
 
 const TRANSLATION_FALLBACKS_EN = [
   'journey',
@@ -83,10 +86,7 @@ const DANISH_FALLBACKS = [
   'vej'
 ];
 
-const PART_OF_SPEECH_LABELS: Record<
-  string,
-  { english: string; chinese: string }
-> = {
+const PART_OF_SPEECH_LABELS: Record<string, { english: string; chinese: string }> = {
   noun: { english: 'Noun', chinese: '名词' },
   verb: { english: 'Verb', chinese: '动词' },
   adjective: { english: 'Adjective', chinese: '形容词' },
@@ -129,14 +129,10 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function formatPartOfSpeechLabel(
-  value: string,
-  audienceLanguage: AudienceLanguage
-): string {
+function formatPartOfSpeechLabel(value: string, audienceLanguage: AudienceLanguage): string {
   const normalized = value.trim().toLowerCase();
   const mapping = PART_OF_SPEECH_LABELS[normalized];
-  const readable =
-    mapping?.english ?? value.charAt(0).toUpperCase() + value.slice(1);
+  const readable = mapping?.english ?? value.charAt(0).toUpperCase() + value.slice(1);
 
   if (audienceLanguage === 'chinese') {
     const localized = mapping?.chinese ?? '词性';
@@ -144,6 +140,24 @@ function formatPartOfSpeechLabel(
   }
 
   return readable;
+}
+
+function getWordDifficulty(word: VocabularyWord): number {
+  switch (word.proficiencyLevel) {
+    case 'mastered':
+      return 1;
+    case 'familiar':
+      return 2;
+    case 'learning':
+      return 3;
+    case 'new':
+    default:
+      return 4;
+  }
+}
+
+function computeQuestionDifficulty(typeDifficulty: number, word: VocabularyWord): number {
+  return typeDifficulty * 10 + getWordDifficulty(word);
 }
 
 function buildTranslationDistractors(
@@ -155,9 +169,7 @@ function buildTranslationDistractors(
   const pool = words
     .map((word) => word.englishTranslation.trim())
     .filter(
-      (translation) =>
-        translation &&
-        translation.toLowerCase() !== correctTranslation.toLowerCase()
+      (translation) => translation && translation.toLowerCase() !== correctTranslation.toLowerCase()
     );
 
   const unique: string[] = [];
@@ -170,10 +182,7 @@ function buildTranslationDistractors(
     }
   }
 
-  const fallbacks =
-    audienceLanguage === 'chinese'
-      ? TRANSLATION_FALLBACKS_CN
-      : TRANSLATION_FALLBACKS_EN;
+  const fallbacks = audienceLanguage === 'chinese' ? TRANSLATION_FALLBACKS_CN : TRANSLATION_FALLBACKS_EN;
 
   for (const fallback of fallbacks) {
     if (unique.length >= required) {
@@ -197,10 +206,7 @@ function buildPartOfSpeechDistractors(
 ): string[] {
   const pool = words
     .map((word) => word.partOfSpeech?.trim().toLowerCase())
-    .filter(
-      (pos): pos is string =>
-        Boolean(pos) && pos !== correctPartOfSpeech.toLowerCase()
-    );
+    .filter((pos): pos is string => Boolean(pos) && pos !== correctPartOfSpeech.toLowerCase());
 
   const unique: string[] = [];
   for (const option of shuffleArray(pool)) {
@@ -216,10 +222,7 @@ function buildPartOfSpeechDistractors(
     if (unique.length >= required) {
       break;
     }
-    if (
-      fallback !== correctPartOfSpeech.toLowerCase() &&
-      !unique.includes(fallback)
-    ) {
+    if (fallback !== correctPartOfSpeech.toLowerCase() && !unique.includes(fallback)) {
       unique.push(fallback);
     }
   }
@@ -227,16 +230,10 @@ function buildPartOfSpeechDistractors(
   return unique.slice(0, required);
 }
 
-function buildDanishDistractors(
-  words: VocabularyWord[],
-  correctWord: string,
-  required: number
-): string[] {
+function buildDanishDistractors(words: VocabularyWord[], correctWord: string, required: number): string[] {
   const pool = words
     .map((word) => word.danishWord.trim())
-    .filter(
-      (text) => text && text.toLowerCase() !== correctWord.toLowerCase()
-    );
+    .filter((text) => text && text.toLowerCase() !== correctWord.toLowerCase());
 
   const unique: string[] = [];
   for (const option of shuffleArray(pool)) {
@@ -266,9 +263,7 @@ function buildDanishDistractors(
 function selectSentenceForWord(word: VocabularyWord): string | null {
   const lowered = word.danishWord.toLowerCase();
 
-  const fromExamples = word.exampleSentences?.find((sentence) =>
-    sentence.toLowerCase().includes(lowered)
-  );
+  const fromExamples = word.exampleSentences?.find((sentence) => sentence.toLowerCase().includes(lowered));
   if (fromExamples) {
     return fromExamples;
   }
@@ -327,7 +322,8 @@ function createTranslationQuestions(
         audienceLanguage === 'chinese'
           ? '提示：回想它在对话中的翻译。'
           : 'Hint: Think about how it was translated in your conversation.',
-      options
+      options,
+      difficultyScore: computeQuestionDifficulty(1, word)
     };
   });
 }
@@ -385,7 +381,8 @@ function createGrammarQuestions(
         audienceLanguage === 'chinese'
           ? '提示：注意单词在句子中的作用。'
           : 'Hint: Think about the role this word plays in a sentence.',
-      options
+      options,
+      difficultyScore: computeQuestionDifficulty(2, word)
     };
   });
 }
@@ -399,9 +396,7 @@ function createClozeQuestions(
       const sentence = selectSentenceForWord(word);
       return { word, sentence };
     })
-    .filter((item): item is { word: VocabularyWord; sentence: string } =>
-      Boolean(item.sentence)
-    );
+    .filter((item): item is { word: VocabularyWord; sentence: string } => Boolean(item.sentence));
 
   if (candidates.length === 0) {
     return [];
@@ -416,10 +411,7 @@ function createClozeQuestions(
       const regex = new RegExp(`\\b${escapeRegExp(word.danishWord)}\\b`, 'i');
       const hasExactWord = regex.test(cleanSentence);
       const displayedSentence = hasExactWord
-        ? cleanSentence.replace(
-            new RegExp(`\\b${escapeRegExp(word.danishWord)}\\b`, 'gi'),
-            '____'
-          )
+        ? cleanSentence.replace(new RegExp(`\\b${escapeRegExp(word.danishWord)}\\b`, 'gi'), '____')
         : `____ ${cleanSentence}`;
 
       const baseExplanation =
@@ -464,16 +456,17 @@ function createClozeQuestions(
           audienceLanguage === 'chinese'
             ? `提示：它的意思是 “${word.englishTranslation}”。`
             : `Hint: It means “${word.englishTranslation}”.`,
-        options
+        options,
+        difficultyScore: computeQuestionDifficulty(3, word)
       };
     })
     .filter((question): question is ExerciseQuestion => question !== null);
 }
 
-function generateExerciseQuestions(
+function generateExerciseBatches(
   vocabulary: VocabularyWord[],
   audienceLanguage: AudienceLanguage
-): ExerciseQuestion[] {
+): ExerciseQuestion[][] {
   const usableWords = vocabulary.filter(
     (word) => word.danishWord?.trim() && word.englishTranslation?.trim()
   );
@@ -482,39 +475,45 @@ function generateExerciseQuestions(
     return [];
   }
 
-  const translationQuestions = createTranslationQuestions(
-    usableWords,
-    audienceLanguage
-  );
-  const grammarQuestions = createGrammarQuestions(
-    usableWords,
-    audienceLanguage
-  );
+  const translationQuestions = createTranslationQuestions(usableWords, audienceLanguage);
+  const grammarQuestions = createGrammarQuestions(usableWords, audienceLanguage);
   const clozeQuestions = createClozeQuestions(usableWords, audienceLanguage);
 
-  const combined = [
-    ...translationQuestions,
-    ...grammarQuestions,
-    ...clozeQuestions
-  ];
+  const combined = [...translationQuestions, ...grammarQuestions, ...clozeQuestions];
 
   if (combined.length === 0 && usableWords.length > 0) {
-    return createTranslationQuestions(usableWords, audienceLanguage).slice(
-      0,
-      3
-    );
+    const fallback = createTranslationQuestions(usableWords, audienceLanguage).slice(0, QUESTIONS_PER_TEST);
+    return fallback.length > 0 ? [fallback] : [];
   }
 
-  return shuffleArray(combined).slice(
-    0,
-    Math.min(MAX_TOTAL_QUESTIONS, combined.length)
+  const sorted = combined
+    .sort((a, b) => a.difficultyScore - b.difficultyScore)
+    .slice(0, MAX_TOTAL_QUESTIONS);
+
+  const batches: ExerciseQuestion[][] = [];
+  for (let i = 0; i < sorted.length; i += QUESTIONS_PER_TEST) {
+    batches.push(sorted.slice(i, i + QUESTIONS_PER_TEST));
+  }
+  return batches;
+}
+
+function prepareQuestionBatches(
+  vocabulary: VocabularyWord[],
+  audienceLanguage: AudienceLanguage
+): ExerciseQuestionState[][] {
+  const batches = generateExerciseBatches(vocabulary, audienceLanguage);
+  return batches.map((batch) =>
+    batch.map((question) => ({
+      ...question,
+      attempts: 0,
+      incorrectAttempts: 0,
+      answeredCorrectly: false,
+      firstAttemptCorrect: false
+    }))
   );
 }
 
-function localizeExerciseTypeLabel(
-  type: ExerciseType,
-  audienceLanguage: AudienceLanguage
-): string {
+function localizeExerciseTypeLabel(type: ExerciseType, audienceLanguage: AudienceLanguage): string {
   if (audienceLanguage === 'chinese') {
     switch (type) {
       case 'vocabulary':
@@ -540,51 +539,34 @@ function localizeExerciseTypeLabel(
   }
 }
 
-const ExercisePanel: React.FC<ExercisePanelProps> = ({
-  vocabulary,
-  audienceLanguage,
-  onClose
-}) => {
-  const [questions, setQuestions] = useState<ExerciseQuestionState[]>(() =>
-    generateExerciseQuestions(vocabulary, audienceLanguage).map((question) => ({
-      ...question,
-      attempts: 0,
-      incorrectAttempts: 0,
-      answeredCorrectly: false,
-      firstAttemptCorrect: false
-    }))
+const ExercisePanel: React.FC<ExercisePanelProps> = ({ vocabulary, audienceLanguage, onClose }) => {
+  const [questionBatches, setQuestionBatches] = useState<ExerciseQuestionState[][]>(() =>
+    prepareQuestionBatches(vocabulary, audienceLanguage)
   );
+  const [currentBatchIndex, setCurrentBatchIndex] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
 
   useEffect(() => {
-    const generated = generateExerciseQuestions(vocabulary, audienceLanguage);
-    setQuestions(
-      generated.map((question) => ({
-        ...question,
-        attempts: 0,
-        incorrectAttempts: 0,
-        answeredCorrectly: false,
-        firstAttemptCorrect: false
-      }))
-    );
+    const prepared = prepareQuestionBatches(vocabulary, audienceLanguage);
+    setQuestionBatches(prepared);
+    setCurrentBatchIndex(0);
     setCurrentIndex(0);
     setShowSummary(false);
   }, [vocabulary, audienceLanguage]);
 
-  const currentQuestion = questions[currentIndex];
+  const currentBatch = questionBatches[currentBatchIndex] ?? [];
+  const currentQuestion = currentBatch[currentIndex];
+  const totalBatches = questionBatches.length;
+  const isLastBatch = currentBatchIndex >= totalBatches - 1;
 
   const stats = useMemo(() => {
-    const totalQuestions = questions.length;
-    const completed = questions.filter(
-      (question) => question.answeredCorrectly || question.skipped
-    ).length;
-    const correct = questions.filter((question) => question.answeredCorrectly)
-      .length;
-    const firstTry = questions.filter(
-      (question) => question.firstAttemptCorrect
-    ).length;
-    const incorrectAttempts = questions.reduce(
+    const batch = currentBatch;
+    const totalQuestions = batch.length;
+    const completed = batch.filter((question) => question.answeredCorrectly || question.skipped).length;
+    const correct = batch.filter((question) => question.answeredCorrectly).length;
+    const firstTry = batch.filter((question) => question.firstAttemptCorrect).length;
+    const incorrectAttempts = batch.reduce(
       (sum, question) => sum + question.incorrectAttempts,
       0
     );
@@ -595,109 +577,112 @@ const ExercisePanel: React.FC<ExercisePanelProps> = ({
       correct,
       firstTry,
       incorrectAttempts,
-      accuracy:
-        totalQuestions > 0 ? Math.round((correct / totalQuestions) * 100) : 0,
-      firstTryAccuracy:
-        totalQuestions > 0
-          ? Math.round((firstTry / totalQuestions) * 100)
-          : 0
+      accuracy: totalQuestions > 0 ? Math.round((correct / totalQuestions) * 100) : 0,
+      firstTryAccuracy: totalQuestions > 0 ? Math.round((firstTry / totalQuestions) * 100) : 0
     };
-  }, [questions]);
+  }, [currentBatch]);
 
   const handleOptionSelect = (optionId: string) => {
-    setQuestions((prev) =>
-      prev.map((question, index) => {
-        if (index !== currentIndex) {
-          return question;
+    if (!currentQuestion) {
+      return;
+    }
+
+    setQuestionBatches((prev) =>
+      prev.map((batch, batchIndex) => {
+        if (batchIndex !== currentBatchIndex) {
+          return batch;
         }
-
-        if (question.answeredCorrectly) {
-          return question;
-        }
-
-        const selectedOption = question.options.find(
-          (option) => option.id === optionId
-        );
-        if (!selectedOption) {
-          return question;
-        }
-
-        const baseFeedback = selectedOption.explanation;
-        const feedback = selectedOption.isCorrect
-          ? audienceLanguage === 'chinese'
-            ? `太棒了！${baseFeedback}`
-            : `Great job! ${baseFeedback}`
-          : audienceLanguage === 'chinese'
-          ? `不太对：${baseFeedback}`
-          : `Not quite: ${baseFeedback}`;
-
-        const updatedOptions = question.options.map((option) => {
-          if (option.id === optionId) {
-            return {
-              ...option,
-              status: selectedOption.isCorrect ? 'correct' : 'incorrect',
-              disabled: true
-            };
+        return batch.map((question, questionIndex) => {
+          if (questionIndex !== currentIndex) {
+            return question;
           }
-          if (selectedOption.isCorrect) {
-            return { ...option, disabled: true };
+
+          if (question.answeredCorrectly) {
+            return question;
           }
-          return option;
+
+          const selectedOption = question.options.find((option) => option.id === optionId);
+          if (!selectedOption) {
+            return question;
+          }
+
+          const baseFeedback = selectedOption.explanation;
+          const feedback = selectedOption.isCorrect
+            ? audienceLanguage === 'chinese'
+              ? `太棒了！${baseFeedback}`
+              : `Great job! ${baseFeedback}`
+            : audienceLanguage === 'chinese'
+            ? `不太对：${baseFeedback}`
+            : `Not quite: ${baseFeedback}`;
+
+          const updatedOptions = question.options.map((option) => {
+            if (option.id === optionId) {
+              return {
+                ...option,
+                status: selectedOption.isCorrect ? 'correct' : 'incorrect',
+                disabled: true
+              };
+            }
+            if (selectedOption.isCorrect) {
+              return { ...option, disabled: true };
+            }
+            return option;
+          });
+
+          return {
+            ...question,
+            attempts: question.attempts + 1,
+            incorrectAttempts: selectedOption.isCorrect
+              ? question.incorrectAttempts
+              : question.incorrectAttempts + 1,
+            answeredCorrectly: selectedOption.isCorrect ? true : question.answeredCorrectly,
+            firstAttemptCorrect: selectedOption.isCorrect ? question.attempts === 0 : question.firstAttemptCorrect,
+            selectedOptionId: optionId,
+            feedback,
+            options: updatedOptions
+          };
         });
-
-        return {
-          ...question,
-          attempts: question.attempts + 1,
-          incorrectAttempts: selectedOption.isCorrect
-            ? question.incorrectAttempts
-            : question.incorrectAttempts + 1,
-          answeredCorrectly: selectedOption.isCorrect
-            ? true
-            : question.answeredCorrectly,
-          firstAttemptCorrect: selectedOption.isCorrect
-            ? question.attempts === 0
-            : question.firstAttemptCorrect,
-          selectedOptionId: optionId,
-          feedback,
-          options: updatedOptions
-        };
       })
     );
   };
 
   const handleSkipQuestion = () => {
-    setQuestions((prev) =>
-      prev.map((question, index) => {
-        if (index !== currentIndex) {
-          return question;
+    setQuestionBatches((prev) =>
+      prev.map((batch, batchIndex) => {
+        if (batchIndex !== currentBatchIndex) {
+          return batch;
         }
 
-        if (question.answeredCorrectly || question.skipped) {
-          return question;
-        }
+        return batch.map((question, questionIndex) => {
+          if (questionIndex !== currentIndex) {
+            return question;
+          }
 
-        const correctOption = question.options.find(
-          (option) => option.isCorrect
-        );
-        const feedback =
-          audienceLanguage === 'chinese'
-            ? `已跳过。本题正确答案是 “${correctOption?.label ?? ''}”。`
-            : `Skipped. The correct answer is “${correctOption?.label ?? ''}”.`;
+          if (question.answeredCorrectly || question.skipped) {
+            return question;
+          }
 
-        const updatedOptions = question.options.map((option) => ({
-          ...option,
-          disabled: true,
-          status: option.isCorrect ? 'correct' : option.status
-        }));
+          const correctOption = question.options.find((option) => option.isCorrect);
+          const feedback =
+            audienceLanguage === 'chinese'
+              ? `已跳过。本题正确答案是 “${correctOption?.label ?? ''}”。`
+              : `Skipped. The correct answer is “${correctOption?.label ?? ''}”.`;
 
-        return {
-          ...question,
-          attempts: question.attempts === 0 ? 1 : question.attempts,
-          incorrectAttempts: question.incorrectAttempts + 1,
-          skipped: true,
-          feedback,
-          options: updatedOptions
-        };
+          const updatedOptions = question.options.map((option) => ({
+            ...option,
+            disabled: true,
+            status: option.isCorrect ? 'correct' : option.status
+          }));
+
+          return {
+            ...question,
+            attempts: question.attempts === 0 ? 1 : question.attempts,
+            incorrectAttempts: question.incorrectAttempts + 1,
+            skipped: true,
+            feedback,
+            options: updatedOptions
+          };
+        });
       })
     );
 
@@ -705,7 +690,7 @@ const ExercisePanel: React.FC<ExercisePanelProps> = ({
   };
 
   const moveToNext = () => {
-    if (currentIndex >= questions.length - 1) {
+    if (currentIndex >= currentBatch.length - 1) {
       setShowSummary(true);
       return;
     }
@@ -716,51 +701,37 @@ const ExercisePanel: React.FC<ExercisePanelProps> = ({
     moveToNext();
   };
 
-  const handleRestart = () => {
-    const regenerated = generateExerciseQuestions(vocabulary, audienceLanguage);
-    setQuestions(
-      regenerated.map((question) => ({
-        ...question,
-        attempts: 0,
-        incorrectAttempts: 0,
-        answeredCorrectly: false,
-        firstAttemptCorrect: false
-      }))
-    );
+  const handleNextTest = () => {
+    if (isLastBatch) {
+      return;
+    }
+    setCurrentBatchIndex((index) => index + 1);
     setCurrentIndex(0);
     setShowSummary(false);
   };
 
-  if (questions.length === 0) {
+  const handleRestart = () => {
+    const prepared = prepareQuestionBatches(vocabulary, audienceLanguage);
+    setQuestionBatches(prepared);
+    setCurrentBatchIndex(0);
+    setCurrentIndex(0);
+    setShowSummary(false);
+  };
+
+  if (questionBatches.length === 0) {
     return (
       <div className="exercise-overlay" onClick={onClose}>
         <div className="exercise-panel" onClick={(event) => event.stopPropagation()}>
           <div className="exercise-header">
-            <h2>
-              {audienceLanguage === 'chinese'
-                ? '词汇练习'
-                : 'Vocabulary Exercises'}
-            </h2>
-            <button
-              className="close-button"
-              onClick={onClose}
-              aria-label="Close exercises"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 384 512"
-                aria-hidden="true"
-              >
+            <h2>{audienceLanguage === 'chinese' ? '词汇练习' : 'Vocabulary Exercises'}</h2>
+            <button className="close-button" onClick={onClose} aria-label="Close exercises">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" aria-hidden="true">
                 <path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z" />
               </svg>
             </button>
           </div>
           <div className="exercise-empty">
-            <h3>
-              {audienceLanguage === 'chinese'
-                ? '还没有可练习的单词'
-                : 'No vocabulary to practice yet'}
-            </h3>
+            <h3>{audienceLanguage === 'chinese' ? '还没有可练习的单词' : 'No vocabulary to practice yet'}</h3>
             <p>
               {audienceLanguage === 'chinese'
                 ? '请先在会话中收集一些生词，然后再来进行练习。'
@@ -780,21 +751,16 @@ const ExercisePanel: React.FC<ExercisePanelProps> = ({
       <div className="exercise-overlay" onClick={onClose}>
         <div className="exercise-panel" onClick={(event) => event.stopPropagation()}>
           <div className="exercise-header">
-            <h2>
-              {audienceLanguage === 'chinese'
-                ? '练习总结'
-                : 'Exercise Summary'}
-            </h2>
-            <button
-              className="close-button"
-              onClick={onClose}
-              aria-label="Close exercises"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 384 512"
-                aria-hidden="true"
-              >
+            <div className="exercise-header-titles">
+              <h2>{audienceLanguage === 'chinese' ? '练习总结' : 'Exercise Summary'}</h2>
+              <span className="exercise-progress">
+                {audienceLanguage === 'chinese'
+                  ? `测试 ${currentBatchIndex + 1} / ${totalBatches}`
+                  : `Test ${currentBatchIndex + 1} of ${totalBatches}`}
+              </span>
+            </div>
+            <button className="close-button" onClick={onClose} aria-label="Close exercises">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" aria-hidden="true">
                 <path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z" />
               </svg>
             </button>
@@ -804,52 +770,41 @@ const ExercisePanel: React.FC<ExercisePanelProps> = ({
               <div className="exercise-summary-card">
                 <span className="exercise-summary-value">{stats.correct}</span>
                 <span className="exercise-summary-label">
-                  {audienceLanguage === 'chinese'
-                    ? '答对题目'
-                    : 'Correct answers'}
+                  {audienceLanguage === 'chinese' ? '答对题目' : 'Correct answers'}
                 </span>
               </div>
               <div className="exercise-summary-card">
-                <span className="exercise-summary-value">
-                  {`${stats.accuracy}%`}
-                </span>
+                <span className="exercise-summary-value">{`${stats.accuracy}%`}</span>
                 <span className="exercise-summary-label">
-                  {audienceLanguage === 'chinese'
-                    ? '整体准确率'
-                    : 'Overall accuracy'}
+                  {audienceLanguage === 'chinese' ? '整体准确率' : 'Overall accuracy'}
                 </span>
               </div>
               <div className="exercise-summary-card">
-                <span className="exercise-summary-value">
-                  {`${stats.firstTryAccuracy}%`}
-                </span>
+                <span className="exercise-summary-value">{`${stats.firstTryAccuracy}%`}</span>
                 <span className="exercise-summary-label">
-                  {audienceLanguage === 'chinese'
-                    ? '首轮正确率'
-                    : 'First-try accuracy'}
+                  {audienceLanguage === 'chinese' ? '首轮正确率' : 'First-try accuracy'}
                 </span>
               </div>
               <div className="exercise-summary-card">
-                <span className="exercise-summary-value">
-                  {stats.incorrectAttempts}
-                </span>
+                <span className="exercise-summary-value">{stats.incorrectAttempts}</span>
                 <span className="exercise-summary-label">
-                  {audienceLanguage === 'chinese'
-                    ? '错误尝试'
-                    : 'Incorrect attempts'}
+                  {audienceLanguage === 'chinese' ? '错误尝试' : 'Incorrect attempts'}
                 </span>
               </div>
             </div>
             <div className="exercise-summary-actions">
-              <button className="primary-button" onClick={handleRestart}>
-                {audienceLanguage === 'chinese'
-                  ? '再练一组'
-                  : 'Practice again'}
-              </button>
+              {!isLastBatch && (
+                <button className="primary-button" onClick={handleNextTest}>
+                  {audienceLanguage === 'chinese' ? '开始下一组测试' : 'Start next test'}
+                </button>
+              )}
+              {isLastBatch && (
+                <button className="primary-button" onClick={handleRestart}>
+                  {audienceLanguage === 'chinese' ? '重新开始所有测试' : 'Restart all tests'}
+                </button>
+              )}
               <button className="secondary-button" onClick={onClose}>
-                {audienceLanguage === 'chinese'
-                  ? '返回会话'
-                  : 'Back to chat'}
+                {audienceLanguage === 'chinese' ? '返回会话' : 'Back to chat'}
               </button>
             </div>
           </div>
@@ -858,32 +813,28 @@ const ExercisePanel: React.FC<ExercisePanelProps> = ({
     );
   }
 
+  if (!currentQuestion) {
+    return null;
+  }
+
   return (
     <div className="exercise-overlay" onClick={onClose}>
       <div className="exercise-panel" onClick={(event) => event.stopPropagation()}>
         <div className="exercise-header">
           <div className="exercise-header-titles">
-            <h2>
-              {audienceLanguage === 'chinese'
-                ? '词汇练习'
-                : 'Vocabulary Exercises'}
-            </h2>
+            <h2>{audienceLanguage === 'chinese' ? '词汇练习' : 'Vocabulary Exercises'}</h2>
             <span className="exercise-progress">
               {audienceLanguage === 'chinese'
-                ? `题目 ${currentIndex + 1} / ${questions.length}`
-                : `Question ${currentIndex + 1} of ${questions.length}`}
+                ? `测试 ${currentBatchIndex + 1} / ${totalBatches} · 题目 ${currentIndex + 1} / ${
+                    currentBatch.length
+                  }`
+                : `Test ${currentBatchIndex + 1} of ${totalBatches} · Question ${currentIndex + 1} of ${
+                    currentBatch.length
+                  }`}
             </span>
           </div>
-          <button
-            className="close-button"
-            onClick={onClose}
-            aria-label="Close exercises"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 384 512"
-              aria-hidden="true"
-            >
+          <button className="close-button" onClick={onClose} aria-label="Close exercises">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" aria-hidden="true">
               <path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z" />
             </svg>
           </button>
@@ -896,9 +847,7 @@ const ExercisePanel: React.FC<ExercisePanelProps> = ({
           <div className="exercise-question">
             <p className="exercise-question-prompt">{currentQuestion.prompt}</p>
             {currentQuestion.body && (
-              <blockquote className="exercise-question-body">
-                {currentQuestion.body}
-              </blockquote>
+              <blockquote className="exercise-question-body">{currentQuestion.body}</blockquote>
             )}
             {currentQuestion.hint && (
               <p className="exercise-question-hint">{currentQuestion.hint}</p>
@@ -950,15 +899,13 @@ const ExercisePanel: React.FC<ExercisePanelProps> = ({
           <button
             className="primary-button"
             onClick={handleNextQuestion}
-            disabled={
-              !currentQuestion.answeredCorrectly && !currentQuestion.skipped
-            }
+            disabled={!currentQuestion.answeredCorrectly && !currentQuestion.skipped}
           >
             {audienceLanguage === 'chinese'
-              ? currentIndex === questions.length - 1
+              ? currentIndex === currentBatch.length - 1
                 ? '查看总结'
                 : '下一题'
-              : currentIndex === questions.length - 1
+              : currentIndex === currentBatch.length - 1
               ? 'See summary'
               : 'Next question'}
           </button>
