@@ -15,6 +15,7 @@
   --border-radius: 18px;
   --mic-button-color: #db4437;
   --mic-button-hover-color: #c53929;
+  --secondary-hover-bg: #e8eaed;
 }
 
 /* Dark theme */
@@ -35,6 +36,7 @@
   --border-radius: 18px;
   --mic-button-color: #f28b82;
   --mic-button-hover-color: #f6aea9;
+  --secondary-hover-bg: #3c4043;
 }
 
 [data-theme="dark"] .user-message {
@@ -674,7 +676,8 @@ button:disabled {
 }
 
 .secondary-button:hover {
-  background-color: #e8eaed;
+  background-color: var(--secondary-hover-bg);
+  color: var(--text-color);
 }
 
 .danger-button {
