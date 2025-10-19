@@ -7,6 +7,7 @@ import VocabularyList from './src/components/VocabularyList';
 import FlashcardView from './src/components/FlashcardView';
 import GrammarPanel from './src/components/GrammarPanel';
 import StoryView from './src/components/StoryView';
+import ExercisePanel from './src/components/ExercisePanel';
 import { retryWithBackoff } from './src/utils/retryLogic';
 import { withGenAIClient } from './src/utils/genAIClient';
 import { useTheme } from './src/hooks/useTheme';
@@ -94,6 +95,7 @@ const DanishTutorApp = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showVocabulary, setShowVocabulary] = useState(false);
   const [showFlashcards, setShowFlashcards] = useState(false);
+  const [showExercises, setShowExercises] = useState(false);
   const [showGrammar, setShowGrammar] = useState(false);
   const [showStory, setShowStory] = useState(false);
   const [currentStory, setCurrentStory] = useState<Story | null>(null);
@@ -153,6 +155,12 @@ const DanishTutorApp = () => {
       ctrl: true,
       handler: () => setShowFlashcards(true),
       description: 'Open flashcards'
+    },
+    {
+      key: 'e',
+      ctrl: true,
+      handler: () => setShowExercises(true),
+      description: 'Open exercises'
     },
     {
       key: 'g',
@@ -571,6 +579,16 @@ const DanishTutorApp = () => {
             )}
           </button>
           <button
+            className="exercise-button"
+            onClick={() => setShowExercises(true)}
+            aria-label="Open exercises"
+            title={settings.audienceLanguage === 'chinese' ? '打开词汇练习' : 'Open practice exercises'}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true">
+              <path d="M192 32c-17.7 0-32 14.3-32 32V96h-32c-35.3 0-64 28.7-64 64V416c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H352V64c0-17.7-14.3-32-32-32H192zm160 64H224V64h128v32zM128 160H384c17.7 0 32 14.3 32 32V416c0 17.7-14.3 32-32 32H128c-17.7 0-32-14.3-32-32V192c0-17.7 14.3-32 32-32zM176 224h160c8.8 0 16 7.2 16 16s-7.2 16-16 16H176c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 96h96c8.8 0 16 7.2 16 16s-7.2 16-16 16H176c-8.8 0-16-7.2-16-16s7.2-16 16-16z"/>
+            </svg>
+          </button>
+          <button
             className="story-button"
             onClick={handleGenerateStory}
             disabled={isGeneratingStory}
@@ -672,6 +690,13 @@ const DanishTutorApp = () => {
           vocabulary={dueWords.length > 0 ? dueWords : nonMasteredWords}
           onClose={() => setShowFlashcards(false)}
           onUpdateWord={updateWord}
+        />
+      )}
+      {showExercises && (
+        <ExercisePanel
+          vocabulary={vocabulary}
+          audienceLanguage={settings.audienceLanguage}
+          onClose={() => setShowExercises(false)}
         />
       )}
       {showGrammar && (
