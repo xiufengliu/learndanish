@@ -368,7 +368,7 @@ button:disabled {
   color: #fff;
   padding: 12px 16px;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 1.05rem; /* Slightly larger for readability */
   z-index: 1000;
   max-width: 300px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -376,6 +376,7 @@ button:disabled {
   white-space: pre-wrap;
   transition: max-width 0.3s ease;
   user-select: none;
+  border: 1px solid #222; /* Clear edge against light backgrounds */
 }
 
 .draggable-tooltip {
@@ -478,7 +479,7 @@ button:disabled {
 }
 
 .story-tooltip .tooltip-content:not(.explanation-mode):hover {
-  opacity: 0.9;
+  opacity: 1; /* Avoid dimming text on hover in light mode */
 }
 
 .story-tooltip .tooltip-content.explanation-mode {
