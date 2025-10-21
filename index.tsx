@@ -19,6 +19,7 @@ import { useKeyboardShortcuts, ShortcutHandler } from './src/hooks/useKeyboardSh
 import { useGrammarTracking } from './src/hooks/useGrammarTracking';
 import { generateSystemInstruction } from './src/utils/systemPrompt';
 import { analyzeGrammar } from './src/utils/grammarAnalyzer';
+import { playDanishText } from './src/utils/tts';
 import { useWakeLock } from './src/hooks/useWakeLock';
 import { generateStory } from './src/utils/storyGenerator';
 import type { Story } from './src/types/story';
@@ -116,6 +117,7 @@ const DanishTutorApp = () => {
   
   const currentInputTranscription = useRef('');
   const currentOutputTranscription = useRef('');
+  const receivedAudioThisTurnRef = useRef(false);
 
   // Background-friendly HTMLAudio playback for mobile
   const htmlAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -358,12 +360,21 @@ const DanishTutorApp = () => {
                 }
               }
     
+              // If no audio chunks were received this turn but we have text, synthesize speech
+              if (fullOutput && !receivedAudioThisTurnRef.current) {
+                try { await playDanishText(fullOutput); } catch (e) { console.warn('TTS fallback failed', e); }
+              }
+
+              // Reset turn buffers
+              receivedAudioThisTurnRef.current = false;
               currentInputTranscription.current = '';
               currentOutputTranscription.current = '';
             }
     
-            const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+            const base64Audio = message.serverContent?.modelTurn?.parts?.find((p:any)=>p?.inlineData)?.inlineData?.data
+              || message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
             if (base64Audio) {
+              receivedAudioThisTurnRef.current = true;
               const preferHtmlAudio = isMobileDevice && settings.backgroundAudio;
               if (preferHtmlAudio) {
                 enqueuePcmBase64ForHtmlAudio(base64Audio);
