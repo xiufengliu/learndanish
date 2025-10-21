@@ -303,19 +303,26 @@ const DanishTutorApp = () => {
     let nextStartTime = 0;
     const sources = new Set<AudioBufferSourceNode>();
     
-    sessionPromiseRef.current = withGenAIClient(async (client) =>
-      client.live.connect({
-        model: 'gemini-2.5-flash-native-audio-preview-09-2025',
-        callbacks: {
-          onopen: async () => {
-            console.log('Session opened.');
-            setError(null);
-            // Start with a greeting only if chat history is completely empty.
-            if (chatHistory.length === 0) {
-              setChatHistory([{ role: 'model', text: 'Hej! Hvordan går det?', translation: 'Hello! How are you?'}]);
-            }
-          },
-          onmessage: async (message: LiveServerMessage) => {
+    sessionPromiseRef.current = withGenAIClient(async (client) => {
+      const modelCandidates = [
+        'gemini-2.5-flash-native-audio-preview-09-2025',
+        'gemini-2.5-flash'
+      ];
+      let lastError: unknown;
+      for (const model of modelCandidates) {
+        try {
+          return await client.live.connect({
+            model,
+            callbacks: {
+              onopen: async () => {
+                console.log('Session opened.');
+                setError(null);
+                // Start with a greeting only if chat history is completely empty.
+                if (chatHistory.length === 0) {
+                  setChatHistory([{ role: 'model', text: 'Hej! Hvordan går det?', translation: 'Hello! How are you?'}]);
+                }
+              },
+              onmessage: async (message: LiveServerMessage) => {
             if (message.serverContent?.outputTranscription) {
               currentOutputTranscription.current += message.serverContent.outputTranscription.text;
             } else if (message.serverContent?.inputTranscription) {
@@ -385,9 +392,13 @@ const DanishTutorApp = () => {
               console.error('Session error:', e);
               setError('An error occurred with the connection. Please try refreshing.');
               stopRecording();
+              // Allow retry on next mic press
+              sessionPromiseRef.current = null;
           },
           onclose: () => {
               console.log('Session closed.');
+              // Allow reconnect later
+              sessionPromiseRef.current = null;
           },
         },
         config: {
@@ -403,10 +414,18 @@ const DanishTutorApp = () => {
                 inputAudioTranscription: {},
                 outputAudioTranscription: {},
               },
-      })
-    ).catch(err => {
+          });
+        } catch (err) {
+          lastError = err;
+          console.warn('Live connect failed for model', model, err);
+        }
+      }
+      throw lastError ?? new Error('Failed to open live session');
+    }).catch(err => {
       console.error('Failed to start Gemini live session:', err);
       setError('Unable to connect to the tutor right now. Please try again shortly.');
+      // Clear ref so next attempt can retry
+      sessionPromiseRef.current = null;
       throw err;
     });
   };
@@ -429,13 +448,25 @@ const DanishTutorApp = () => {
         scriptProcessorRef.current = inputAudioContext.createScriptProcessor(4096, 1, 1);
         scriptProcessorRef.current.onaudioprocess = (audioProcessingEvent) => {
             const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
-      const pcmBlob: GenBlob = {
-                data: encode(new Uint8Array(new Int16Array(inputData.map(d => d * 32768)).buffer)),
+            // Clamp and convert to 16-bit PCM
+            const int16 = new Int16Array(inputData.length);
+            for (let i = 0; i < inputData.length; i++) {
+              const s = Math.max(-1, Math.min(1, inputData[i] || 0));
+              int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+            }
+            const bytes = new Uint8Array(int16.buffer);
+            const pcmBlob: GenBlob = {
+                data: encode(bytes),
                 mimeType: 'audio/pcm;rate=16000',
             };
-            sessionPromiseRef.current.then((session: any) => {
-                session.sendRealtimeInput({ media: pcmBlob });
-            });
+            const p = sessionPromiseRef.current;
+            if (p && typeof p.then === 'function') {
+              p.then((session: any) => {
+                try { session.sendRealtimeInput({ media: pcmBlob }); } catch (e) { console.warn('sendRealtimeInput failed', e); }
+              }).catch(() => {
+                // Swallow errors; retry on next audio frame
+              });
+            }
         };
 
         mediaStreamSourceRef.current.connect(scriptProcessorRef.current);
