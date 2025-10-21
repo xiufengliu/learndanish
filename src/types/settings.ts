@@ -11,6 +11,7 @@ export interface AppSettings {
   autoTranslate: boolean;
   keyboardShortcuts: boolean;
   preventScreenLock: boolean;
+  backgroundAudio: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -23,5 +24,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   vocabularyTracking: true,
   autoTranslate: false,
   keyboardShortcuts: true,
-  preventScreenLock: true
+  preventScreenLock: true,
+  backgroundAudio: true
 };

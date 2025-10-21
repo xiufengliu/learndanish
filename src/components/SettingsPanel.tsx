@@ -143,6 +143,21 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdateSetting
               Prevents the phone from locking so conversations continue uninterrupted.
             </p>
           </div>
+
+          {/* Background Audio (mobile HTMLAudio) */}
+          <div className="setting-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={settings.backgroundAudio}
+                onChange={(e) => onUpdateSettings({ backgroundAudio: e.target.checked })}
+              />
+              <span>Prefer background-friendly audio on mobile</span>
+            </label>
+            <p className="setting-hint">
+              Uses system media playback for better audio continuity when the screen locks. Mic input still pauses on lock due to OS policies.
+            </p>
+          </div>
         </div>
       </div>
     </div>

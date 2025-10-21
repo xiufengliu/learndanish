@@ -120,7 +120,8 @@ const DanishTutorApp = () => {
   // Background-friendly HTMLAudio playback for mobile
   const htmlAudioRef = useRef<HTMLAudioElement | null>(null);
   const htmlAudioQueueRef = useRef<string[]>([]);
-  const isMobileAudioPreferred = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const currentAudioUrlRef = useRef<string | null>(null);
+  const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   function pcm16ToWavBlob(int16: Int16Array, sampleRate: number, numChannels: number): Blob {
     const bytesPerSample = 2;
@@ -157,9 +158,15 @@ const DanishTutorApp = () => {
       el.setAttribute('playsinline', '');
       el.setAttribute('preload', 'auto');
       el.addEventListener('ended', () => {
+        // Revoke previous URL
+        if (currentAudioUrlRef.current) {
+          URL.revokeObjectURL(currentAudioUrlRef.current);
+          currentAudioUrlRef.current = null;
+        }
         const next = htmlAudioQueueRef.current.shift();
         if (next) {
           el.src = next;
+          currentAudioUrlRef.current = next;
           void el.play().catch(() => {});
         } else {
           try { (navigator as any).mediaSession && ((navigator as any).mediaSession.playbackState = 'none'); } catch {}
@@ -179,7 +186,22 @@ const DanishTutorApp = () => {
     const el = ensureHtmlAudio();
     if (!el.src || el.paused) {
       el.src = url;
+      currentAudioUrlRef.current = url;
       try { (navigator as any).mediaSession && ((navigator as any).mediaSession.playbackState = 'playing'); } catch {}
+      // Media Session metadata and controls
+      try {
+        const anyNav = navigator as any;
+        if (anyNav.mediaSession) {
+          anyNav.mediaSession.metadata = new (window as any).MediaMetadata?.({
+            title: 'Danish Tutor',
+            artist: 'Live Conversation',
+            album: 'Background Audio',
+          }) || anyNav.mediaSession.metadata;
+          anyNav.mediaSession.setActionHandler?.('pause', () => { try { el.pause(); } catch {} });
+          anyNav.mediaSession.setActionHandler?.('play', () => { try { void el.play(); } catch {} });
+          anyNav.mediaSession.setActionHandler?.('stop', () => { try { el.pause(); el.currentTime = 0; } catch {} });
+        }
+      } catch {}
       void el.play().catch(() => {});
     } else {
       htmlAudioQueueRef.current.push(url);
@@ -335,7 +357,8 @@ const DanishTutorApp = () => {
     
             const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
             if (base64Audio) {
-              if (isMobileAudioPreferred) {
+              const preferHtmlAudio = isMobileDevice && settings.backgroundAudio;
+              if (preferHtmlAudio) {
                 enqueuePcmBase64ForHtmlAudio(base64Audio);
               } else {
                 nextStartTime = Math.max(nextStartTime, outputAudioContext.currentTime);
@@ -538,6 +561,10 @@ const DanishTutorApp = () => {
     return () => {
       if (htmlAudioRef.current) {
         try { htmlAudioRef.current.pause(); } catch {}
+        if (currentAudioUrlRef.current) {
+          URL.revokeObjectURL(currentAudioUrlRef.current);
+          currentAudioUrlRef.current = null;
+        }
         htmlAudioRef.current.src = '';
         htmlAudioRef.current.remove();
         htmlAudioRef.current = null;
