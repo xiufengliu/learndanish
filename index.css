@@ -44,8 +44,8 @@
 }
 
 [data-theme="dark"] .tooltip {
-  background-color: #3c4043;
-  border: 1px solid #5f6368;
+  background-color: #000; /* Force solid black in dark theme */
+  border: 1px solid #444;
 }
 
 /* Set a stable 100% height foundation */
@@ -364,8 +364,8 @@ button:disabled {
 
 .tooltip {
   position: fixed;
-  background-color: #333;
-  color: white;
+  background-color: #000; /* Improve contrast for translations */
+  color: #fff;
   padding: 12px 16px;
   border-radius: 8px;
   font-size: 1rem;
