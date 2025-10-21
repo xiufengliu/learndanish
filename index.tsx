@@ -710,7 +710,7 @@ const DanishTutorApp = () => {
         <div className="story-overlay">
           <div className="story-loading">
             <div className="loading-spinner"></div>
-            <p>Generating your Danish story...</p>
+            <p>Denerating your reading ...</p>
           </div>
         </div>
       )}

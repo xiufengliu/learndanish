@@ -91,46 +91,60 @@ export async function generateStory(
   difficultyLevel: 'beginner' | 'intermediate' | 'advanced',
   audienceLanguage: 'english' | 'chinese' = 'english'
 ): Promise<Story> {
-  const difficultyDescriptions = {
-    beginner: `Align with the goals of PD1 (Prøve i Dansk 1). Use simple present-tense sentences, signage-level vocabulary, and everyday routines such as shopping, transportation, family life, or appointments. Assume the reader is new to Latin script and highlight clear, concrete actions and observable details.`,
-    intermediate: `Match PD2 (Prøve i Dansk 2, CEFR B1). Use connected discourse about community life, work, civic participation, or practical problem-solving. Include a mix of past and future tenses, modal verbs, short subordinate clauses, and realistic communication tasks (e.g., writing a short email, arranging services).`,
-    advanced: `Aim for PD3 / Studieprøven level (upper B2 to C1). Deliver a longer narrative or analytical piece that could appear in a feature article, academic preparation text, or professional briefing. Incorporate abstract reflections, cause-and-effect reasoning, nuanced vocabulary (including idioms), and at least one short quote or reported speech segment.`
+  // Map app levels to PD test levels
+  const levelToPD = {
+    beginner: 'PD1',
+    intermediate: 'PD2',
+    advanced: 'PD3'
   } as const;
 
-  const difficultyTopics = {
-    beginner: 'Pick a setting such as grocery shopping, visiting a doctor, taking the bus, or meeting a neighbour. Keep the tone friendly and supportive.',
-    intermediate: 'Choose a scenario like volunteering in the community, navigating municipal services, balancing work and family, or handling a complex customer-service situation.',
-    advanced: 'Select a theme suited to academic or professional discussion—for example sustainability policy, cultural debates, healthcare innovation, workplace leadership, or university life.'
+  // PD-aligned guidance for reading passages
+  const difficultyDescriptions = {
+    beginner: `PD1 (Prøve i Dansk 1). Very simple, concrete everyday Danish with short main clauses, mostly present tense, and high-frequency words. Avoid idioms.`,
+    intermediate: `PD2 (Prøve i Dansk 2, ~CEFR B1). Connected everyday Danish covering work, society, and practical tasks. Allow past/future tenses, a few subordinate clauses, and modal verbs.`,
+    advanced: `PD3 (upper B2). Longer, exam-style reading text suitable for test preparation with some abstraction, cause–effect reasoning, and varied sentence structures. Include 1–2 short quotes or reported speech when natural.`
+  } as const;
+
+  const lengthGuidance = {
+    beginner: 'Length target: about 80–120 words (7–10 short sentences).',
+    intermediate: 'Length target: about 150–220 words (10–14 sentences).',
+    advanced: 'Length target: about 250–350 words (12–18 sentences).'
+  } as const;
+
+  const domainGuidance = {
+    beginner: 'Contexts: shopping, public transport, simple appointments, family, housing, school messages.',
+    intermediate: 'Contexts: community services, workplace situations, municipal information, volunteering, daily coordination.',
+    advanced: 'Contexts: civic topics, culture, education, sustainability, work practices, societal debates.'
   } as const;
 
   const translationLanguage = audienceLanguage === 'chinese' ? 'Simplified Chinese (简体中文)' : 'English';
   const translationField = audienceLanguage === 'chinese' ? 'chineseTranslation' : 'englishTranslation';
 
-  const prompt = `You are an expert Danish language teacher. Create a short Danish story and ten follow-up exercises. Follow these requirements:
+  // Use “reading passage” and explicitly reference PD levels
+  const prompt = `You are a Danish language teacher preparing an exam-style reading passage and follow-up questions.
 
-Story requirements:
-- Difficulty guidance: ${difficultyDescriptions[difficultyLevel]}
-- Scenario inspiration: ${difficultyTopics[difficultyLevel]}
-- Length: 7-10 sentences.
-- Include engaging content and, when natural, a cultural touch.
-- Provide the full translation in ${translationLanguage}, aligning sentence-by-sentence with the Danish text.
+Create ONE Danish reading passage that matches ${levelToPD[difficultyLevel]} level and test style:
+- Level guidance: ${difficultyDescriptions[difficultyLevel]}
+- ${lengthGuidance[difficultyLevel]}
+- Typical domains: ${domainGuidance[difficultyLevel]}
+- Tone: neutral, informative, realistic, and suitable for test preparation (no slang, no humor-only pieces).
+- Provide a complete, sentence-aligned translation in ${translationLanguage} after the Danish text.
 
-Exercise requirements:
-- Produce exactly 10 multiple-choice questions.
-- At least 5 questions must be of type "comprehension" that test story understanding (sequence of events, cause/effect, inference, main idea, etc.).
-- Remaining questions may be "translation", "cloze", or "preposition". Do not invent other types.
-- Every question must have exactly 4 answer options with one correct choice.
-- Provide a short explanation for each option to give feedback (in the same language used for that option).
-- For "translation" questions, write the prompt, answer choices, and explanations in ${translationLanguage} so the learner can choose the correct translation.
-- For "comprehension", "cloze", and "preposition" questions, keep the prompt, answer choices, and explanations entirely in Danish.
-- Always populate "danishContext" with the exact Danish sentence or excerpt from the story that the question is based on.
-- For cloze questions, output the gapped sentence in the "body" field using "_____".
-- Assign a difficulty between 1 and 5 (higher = harder).
+Then create TEN multiple-choice questions aligned with PD reading tasks:
+- Include at least 5 "comprehension" questions (main idea, detail, inference, sequence, cause/effect).
+- The remaining may be "translation", "cloze", or "preposition".
+- Each question must have exactly 4 options with a single correct answer.
+- Provide brief feedback explanations for each option.
+- For "translation" questions, use ${translationLanguage} for prompt/options/explanations.
+- For other types, keep prompt/options/explanations in Danish.
+- Always set "danishContext" to the exact Danish sentence/excerpt from the passage that the question references.
+- For cloze, provide the gapped sentence in "body" using "_____".
+- Assign a numeric difficulty 1–5.
 
 Return ONLY a JSON object with this exact structure:
 {
-  "danishText": "...\n...",
-  "${translationField}": "...\n...",
+  "danishText": "...\\n...",
+  "${translationField}": "...\\n...",
   "exercises": [
     {
       "id": "q1",
