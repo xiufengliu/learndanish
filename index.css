@@ -458,6 +458,9 @@ button:disabled {
   max-height: 80vh;
   overflow-y: auto;
   overflow-x: hidden;
+  background-color: #000 !important; /* Force black for readability in light mode */
+  color: #fff !important;           /* Ensure all text renders white */
+  border: 1px solid #222 !important;
 }
 
 .story-tooltip .tooltip-content {
@@ -466,10 +469,12 @@ button:disabled {
   cursor: pointer;
   max-height: calc(80vh - 60px);
   overflow-y: auto;
+  color: #fff !important;
 }
 
 .story-tooltip .tooltip-content:not(.explanation-mode) {
   padding-left: 4px;
+  color: #fff !important;
 }
 
 .story-tooltip .tooltip-content:not(.explanation-mode)::first-letter {
@@ -485,6 +490,37 @@ button:disabled {
 .story-tooltip .tooltip-content.explanation-mode {
   cursor: grab;
   max-height: none;
+  color: #fff !important;
+}
+
+/* Ensure translation block specifically renders white */
+.story-tooltip .tooltip-translation {
+  color: #fff !important;
+}
+
+/* Style the Explain button (class used by StoryView) */
+.tooltip-explain-button {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 6px 10px;
+  opacity: 0.95;
+  transition: all 0.2s ease;
+  user-select: none;
+  border-radius: 6px;
+  margin-top: 8px;
+}
+
+.tooltip-explain-button:hover:not(:disabled) {
+  opacity: 1;
+  background-color: rgba(102, 126, 234, 0.35);
+}
+
+.tooltip-explain-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .container.maximized .tooltip {
