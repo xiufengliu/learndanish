@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { LiveServerMessage, Modality, Blob } from "@google/genai";
+import type { LiveServerMessage, Blob as GenBlob } from "@google/genai";
+import { Modality } from "@google/genai";
 import ErrorBoundary from './src/components/ErrorBoundary';
 import SettingsPanel from './src/components/SettingsPanel';
 import VocabularyList from './src/components/VocabularyList';
@@ -115,6 +116,75 @@ const DanishTutorApp = () => {
   
   const currentInputTranscription = useRef('');
   const currentOutputTranscription = useRef('');
+
+  // Background-friendly HTMLAudio playback for mobile
+  const htmlAudioRef = useRef<HTMLAudioElement | null>(null);
+  const htmlAudioQueueRef = useRef<string[]>([]);
+  const isMobileAudioPreferred = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  function pcm16ToWavBlob(int16: Int16Array, sampleRate: number, numChannels: number): Blob {
+    const bytesPerSample = 2;
+    const blockAlign = numChannels * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = int16.length * bytesPerSample;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+
+    let offset = 0;
+    const writeString = (s: string) => { for (let i = 0; i < s.length; i++) view.setUint8(offset + i, s.charCodeAt(i)); offset += s.length; };
+
+    writeString('RIFF');
+    view.setUint32(offset, 36 + dataSize, true); offset += 4;
+    writeString('WAVE');
+    writeString('fmt ');
+    view.setUint32(offset, 16, true); offset += 4; // PCM chunk size
+    view.setUint16(offset, 1, true); offset += 2;  // PCM format
+    view.setUint16(offset, numChannels, true); offset += 2;
+    view.setUint32(offset, sampleRate, true); offset += 4;
+    view.setUint32(offset, byteRate, true); offset += 4;
+    view.setUint16(offset, blockAlign, true); offset += 2;
+    view.setUint16(offset, 16, true); offset += 2; // bits
+    writeString('data');
+    view.setUint32(offset, dataSize, true); offset += 4;
+    for (let i = 0; i < int16.length; i++) view.setInt16(44 + i * 2, int16[i], true);
+    return new Blob([view], { type: 'audio/wav' });
+  }
+
+  function ensureHtmlAudio(): HTMLAudioElement {
+    if (!htmlAudioRef.current) {
+      const el = document.createElement('audio');
+      el.style.display = 'none';
+      el.setAttribute('playsinline', '');
+      el.setAttribute('preload', 'auto');
+      el.addEventListener('ended', () => {
+        const next = htmlAudioQueueRef.current.shift();
+        if (next) {
+          el.src = next;
+          void el.play().catch(() => {});
+        } else {
+          try { (navigator as any).mediaSession && ((navigator as any).mediaSession.playbackState = 'none'); } catch {}
+        }
+      });
+      document.body.appendChild(el);
+      htmlAudioRef.current = el;
+    }
+    return htmlAudioRef.current;
+  }
+
+  function enqueuePcmBase64ForHtmlAudio(base64: string) {
+    const bytes = decode(base64);
+    const int16 = new Int16Array(bytes.buffer);
+    const wav = pcm16ToWavBlob(int16, 24000, 1);
+    const url = URL.createObjectURL(wav);
+    const el = ensureHtmlAudio();
+    if (!el.src || el.paused) {
+      el.src = url;
+      try { (navigator as any).mediaSession && ((navigator as any).mediaSession.playbackState = 'playing'); } catch {}
+      void el.play().catch(() => {});
+    } else {
+      htmlAudioQueueRef.current.push(url);
+    }
+  }
 
   const [tooltip, setTooltip] = useState({ visible: false, text: '', x: 0, y: 0 });
   const [isDraggingTooltip, setIsDraggingTooltip] = useState(false);
@@ -265,15 +335,19 @@ const DanishTutorApp = () => {
     
             const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
             if (base64Audio) {
-              nextStartTime = Math.max(nextStartTime, outputAudioContext.currentTime);
-              const audioBuffer = await decodeAudioData(decode(base64Audio), outputAudioContext, 24000, 1);
-              const source = outputAudioContext.createBufferSource();
-              source.buffer = audioBuffer;
-              source.connect(outputNode);
-              source.addEventListener('ended', () => sources.delete(source));
-              source.start(nextStartTime);
-              nextStartTime += audioBuffer.duration;
-              sources.add(source);
+              if (isMobileAudioPreferred) {
+                enqueuePcmBase64ForHtmlAudio(base64Audio);
+              } else {
+                nextStartTime = Math.max(nextStartTime, outputAudioContext.currentTime);
+                const audioBuffer = await decodeAudioData(decode(base64Audio), outputAudioContext, 24000, 1);
+                const source = outputAudioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(outputNode);
+                source.addEventListener('ended', () => sources.delete(source));
+                source.start(nextStartTime);
+                nextStartTime += audioBuffer.duration;
+                sources.add(source);
+              }
             }
     
             if (message.serverContent?.interrupted) {
@@ -332,7 +406,7 @@ const DanishTutorApp = () => {
         scriptProcessorRef.current = inputAudioContext.createScriptProcessor(4096, 1, 1);
         scriptProcessorRef.current.onaudioprocess = (audioProcessingEvent) => {
             const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
-            const pcmBlob: Blob = {
+      const pcmBlob: GenBlob = {
                 data: encode(new Uint8Array(new Int16Array(inputData.map(d => d * 32768)).buffer)),
                 mimeType: 'audio/pcm;rate=16000',
             };
@@ -458,6 +532,22 @@ const DanishTutorApp = () => {
     setTooltip({ visible: false, text: '', x: 0, y: 0 });
     setIsDraggingTooltip(false);
   };
+
+  // Cleanup HTMLAudio resources on unmount
+  useEffect(() => {
+    return () => {
+      if (htmlAudioRef.current) {
+        try { htmlAudioRef.current.pause(); } catch {}
+        htmlAudioRef.current.src = '';
+        htmlAudioRef.current.remove();
+        htmlAudioRef.current = null;
+      }
+      for (const url of htmlAudioQueueRef.current) {
+        URL.revokeObjectURL(url);
+      }
+      htmlAudioQueueRef.current = [];
+    };
+  }, []);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
